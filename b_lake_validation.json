@@ -1,0 +1,12 @@
+{
+  "scope": "Two front L buildings and B lake only",
+  "unchanged_files_including_zip": 40,
+  "protected_triangle_groups": 6,
+  "protected_triangles": 5972,
+  "other_buildings_roads_markings_trees_and_park_ponds_unchanged": true,
+  "zip_unchanged": true,
+  "shorelines_without_self_intersections": true,
+  "sample_spacing_m": 0.003,
+  "sampled_lake_building_and_road_overlap": false,
+  "lake_or_buildings_cover_tree_trunk_centres": false
+}

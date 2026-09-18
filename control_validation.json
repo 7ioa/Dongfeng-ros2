@@ -1,0 +1,22 @@
+{
+  "gazebo_runtime_tested": false,
+  "python_files_parsed": 8,
+  "bash_scripts_parsed": 4,
+  "spawn": {
+    "x": 1.65,
+    "y": 0.19,
+    "z": 0.031,
+    "yaw": 0.0
+  },
+  "spawn_footprint_samples": 775,
+  "road_surface_z": 0.0,
+  "initial_wheel_clearance_m": [
+    0.002999999999999999,
+    0.002999999999999999,
+    0.002999999999999999,
+    0.002999999999999999
+  ],
+  "unchanged_map_archive_files": 77,
+  "control_unit_tests": 11,
+  "status": "PASS"
+}

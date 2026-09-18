@@ -1,0 +1,22 @@
+{
+  "visual_triangles": 24536,
+  "visual_mesh_files": 27,
+  "bounds_min_m": [
+    -0.10279999673366547,
+    -0.07729999721050262,
+    -0.027994399890303612
+  ],
+  "bounds_max_m": [
+    0.10350000113248825,
+    0.07729999721050262,
+    0.08820000290870667
+  ],
+  "wheel_radius_m": 0.028,
+  "wheelbase_m": 0.122,
+  "track_m": 0.132,
+  "body_length_m": 0.2,
+  "body_width_m": 0.14,
+  "total_mass_kg": 1.502,
+  "sensors": "Visual models and frames only; no camera or lidar data yet.",
+  "dimensional_basis": "Existing 0.20 m length and supplied photographs, not measured."
+}

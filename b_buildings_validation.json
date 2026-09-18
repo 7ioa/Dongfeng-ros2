@@ -1,0 +1,12 @@
+{
+  "scope": "B district buildings only",
+  "unchanged_files_including_zip": 38,
+  "unchanged_other_building_triangles": 2898,
+  "roads_paint_water_trees_furniture_unchanged": true,
+  "zip_unchanged": true,
+  "ground_floor_footprints_checked": 6,
+  "footprint_sample_spacing_m": 0.003,
+  "sampled_overlap_with_water_or_outside_island": false,
+  "tree_trunk_centres_inside_buildings": false,
+  "building_collision_updated": true
+}

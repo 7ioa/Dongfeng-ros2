@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "links": 8,
+  "wheel_joints": [
+    "wheel_left_joint",
+    "wheel_left_front_joint",
+    "wheel_right_joint",
+    "wheel_right_front_joint"
+  ],
+  "resolved_mesh_files": 27,
+  "displayed_triangles": 24536,
+  "overall_size_m": [
+    0.20629999041557312,
+    0.15459999442100525,
+    0.11619440466165543
+  ],
+  "mass_kg_estimated": 1.5020000000000002,
+  "camera_optical_forward": "base +X",
+  "sensor_data_implemented": false,
+  "gazebo_runtime_tested": false,
+  "unchanged_map_and_archive_files": 77,
+  "matching_installed_files": 34
+}

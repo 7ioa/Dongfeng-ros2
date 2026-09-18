@@ -1,0 +1,570 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.9">
+  <model name="dongfeng_sandbox">
+    <static>true</static>
+    <link name="site">
+      <visual name="base_base">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/base_base.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.83529 0.86275 0.85098 1</ambient>
+          <diffuse>0.83529 0.86275 0.85098 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="ground_asphalt">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/ground_asphalt.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.18824 0.21569 0.23137 1</ambient>
+          <diffuse>0.18824 0.21569 0.23137 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="boundary_blue_board">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/boundary_blue_board.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.22353 0.49804 0.63137 1</ambient>
+          <diffuse>0.22353 0.49804 0.63137 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="boundary_acrylic">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/boundary_acrylic.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.56471 0.79608 0.83529 1</ambient>
+          <diffuse>0.56471 0.79608 0.83529 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="elevated_road_asphalt">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/elevated_road_asphalt.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.18824 0.21569 0.23137 1</ambient>
+          <diffuse>0.18824 0.21569 0.23137 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="elevated_road_deck_side">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/elevated_road_deck_side.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.37647 0.40784 0.43922 1</ambient>
+          <diffuse>0.37647 0.40784 0.43922 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="markings_white">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/markings_white.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.95294 0.94510 0.87451 1</ambient>
+          <diffuse>0.95294 0.94510 0.87451 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="rails_steel">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/rails_steel.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.60784 0.65882 0.65882 1</ambient>
+          <diffuse>0.60784 0.65882 0.65882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="landscape_kerb">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/landscape_kerb.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.80392 0.77647 0.65882 1</ambient>
+          <diffuse>0.80392 0.77647 0.65882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="landscape_grass">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/landscape_grass.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.48235 0.60000 0.25882 1</ambient>
+          <diffuse>0.48235 0.60000 0.25882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="yard_grey_yard">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/yard_grey_yard.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.60000 0.58039 0.59216 1</ambient>
+          <diffuse>0.60000 0.58039 0.59216 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="yard_grass">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/yard_grass.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.48235 0.60000 0.25882 1</ambient>
+          <diffuse>0.48235 0.60000 0.25882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="landscape_paving">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/landscape_paving.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.77255 0.76078 0.67843 1</ambient>
+          <diffuse>0.77255 0.76078 0.67843 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="landscape_water">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/landscape_water.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.08627 0.54510 0.79216 1</ambient>
+          <diffuse>0.08627 0.54510 0.79216 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="landscape_grey_yard">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/landscape_grey_yard.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.60000 0.58039 0.59216 1</ambient>
+          <diffuse>0.60000 0.58039 0.59216 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_glass">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_glass.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.27451 0.39216 0.44314 1</ambient>
+          <diffuse>0.27451 0.39216 0.44314 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_frame">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_frame.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.73333 0.79608 0.81569 1</ambient>
+          <diffuse>0.73333 0.79608 0.81569 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_roof">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_roof.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.74118 0.78431 0.79608 1</ambient>
+          <diffuse>0.74118 0.78431 0.79608 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_white">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_white.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.95294 0.94510 0.87451 1</ambient>
+          <diffuse>0.95294 0.94510 0.87451 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_glass_light">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_glass_light.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.44314 0.57255 0.61569 1</ambient>
+          <diffuse>0.44314 0.57255 0.61569 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_roof_dark">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_roof_dark.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.27843 0.36471 0.40392 1</ambient>
+          <diffuse>0.27843 0.36471 0.40392 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="buildings_red">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/buildings_red.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.76863 0.28235 0.21569 1</ambient>
+          <diffuse>0.76863 0.28235 0.21569 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="vegetation_bark">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/vegetation_bark.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.43922 0.34902 0.25882 1</ambient>
+          <diffuse>0.43922 0.34902 0.25882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="vegetation_leaf1">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/vegetation_leaf1.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.28627 0.38824 0.20000 1</ambient>
+          <diffuse>0.28627 0.38824 0.20000 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="vegetation_leaf3">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/vegetation_leaf3.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.24314 0.35686 0.19608 1</ambient>
+          <diffuse>0.24314 0.35686 0.19608 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="vegetation_leaf2">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/vegetation_leaf2.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.38039 0.47059 0.23529 1</ambient>
+          <diffuse>0.38039 0.47059 0.23529 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="vegetation_leaf0">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/vegetation_leaf0.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.20392 0.29804 0.16471 1</ambient>
+          <diffuse>0.20392 0.29804 0.16471 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_steel">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_steel.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.60784 0.65882 0.65882 1</ambient>
+          <diffuse>0.60784 0.65882 0.65882 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_white">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_white.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.95294 0.94510 0.87451 1</ambient>
+          <diffuse>0.95294 0.94510 0.87451 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_red">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_red.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.76863 0.28235 0.21569 1</ambient>
+          <diffuse>0.76863 0.28235 0.21569 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_yellow">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_yellow.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.89804 0.70196 0.18431 1</ambient>
+          <diffuse>0.89804 0.70196 0.18431 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_black">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_black.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.14510 0.19608 0.21569 1</ambient>
+          <diffuse>0.14510 0.19608 0.21569 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_light_green">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_light_green.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.50196 0.76863 0.55686 1</ambient>
+          <diffuse>0.50196 0.76863 0.55686 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="street_furniture_roof">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/street_furniture_roof.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.74118 0.78431 0.79608 1</ambient>
+          <diffuse>0.74118 0.78431 0.79608 1</diffuse>
+          <specular>0.15 0.15 0.15 1</specular>
+        </material>
+        <cast_shadows>true</cast_shadows>
+      </visual>
+      <collision name="base">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_base.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="terrain">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_terrain.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="barriers">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_barriers.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="road_deck">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_road_deck.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="kerbs">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_kerbs.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="buildings">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_buildings.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="trees">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_trees.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <collision name="furniture">
+        <geometry>
+          <mesh>
+            <uri>model://dongfeng_sandbox/meshes/collision_furniture.obj</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+    </link>
+  </model>
+</sdf>

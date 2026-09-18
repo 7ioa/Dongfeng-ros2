@@ -1,0 +1,59 @@
+{
+  "glb_header_accessors_and_bounds": "passed",
+  "glb_and_obj_same_geometry": "passed",
+  "visual_triangles": 113210,
+  "glb_zero_area_triangles": 0,
+  "obj_zero_area_triangles": 0,
+  "collision_meshes": {
+    "collision_barriers": {
+      "triangles": 6012,
+      "zero_area_triangles": 0
+    },
+    "collision_base": {
+      "triangles": 12,
+      "zero_area_triangles": 0
+    },
+    "collision_buildings": {
+      "triangles": 252,
+      "zero_area_triangles": 0
+    },
+    "collision_furniture": {
+      "triangles": 824,
+      "zero_area_triangles": 0
+    },
+    "collision_kerbs": {
+      "triangles": 1164,
+      "zero_area_triangles": 0
+    },
+    "collision_road_deck": {
+      "triangles": 6112,
+      "zero_area_triangles": 0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0
+    },
+    "collision_terrain": {
+      "triangles": 31504,
+      "zero_area_triangles": 0
+    },
+    "collision_trees": {
+      "triangles": 4120,
+      "zero_area_triangles": 0
+    }
+  },
+  "front_road_height_checks": {
+    "AB_straight_height_min_max_m": [
+      0.0,
+      0.0
+    ],
+    "arc_crest_height_m": {
+      "A": 0.05,
+      "B": 0.05
+    },
+    "arc_tangent_join_height_m": 0.0,
+    "front_terrain_elevation_m": -0.001,
+    "visual_and_collision_deck_match": true,
+    "peak_location": "midpoint of each A/B quarter-circle"
+  },
+  "note": "Static export checks only. This is not a Gazebo physics or robot navigation runtime test."
+}

@@ -1,0 +1,16 @@
+* text=auto
+
+# Preserve Linux-compatible line endings for executable scripts.
+*.sh text eol=lf
+*.py text eol=lf
+
+# 3D Wavefront assets are text, not compiler object files.
+*.obj text
+*.mtl text
+
+# Binary model, image, and document assets.
+*.glb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary

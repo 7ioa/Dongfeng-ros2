@@ -1,0 +1,36 @@
+# ROS 2 / colcon outputs: rebuild these on the target machine.
+/build/
+/install/
+/log/
+/build_control/
+/install_control/
+/log_control/
+
+# Python caches and local environments.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local editor and operating-system files.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local configuration; keep example configuration files shareable.
+.env
+.env.*
+!.env.example
+
+# Optional reference material, excluded from the initial project upload.
+# Remove these rules if you want to share the photos and course materials.
+/reference_photos/
+/reference_materials/
+
+# Historical copy checksum list, not a manifest of the Git repository.
+/migration_manifest.sha256
+
+# Keep model assets (*.obj, *.mtl, *.glb), previews, and viewer/vendor/.
+# OBJ files in this project are 3D meshes, not compiler outputs.

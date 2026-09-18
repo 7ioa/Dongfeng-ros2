@@ -1,0 +1,33 @@
+{
+  "units": "metres",
+  "interior_width": 3.3,
+  "interior_length": 5.4,
+  "outer_road_radius": 0.8,
+  "one_way_width": 0.3,
+  "central_road_width": 0.62,
+  "centre_line_width": 0.005,
+  "front_curve_height": 0.05,
+  "rear_road_height": 0.13,
+  "rear_straight_slope_length": 0.89,
+  "rear_straight_rise_assumed": 0.065,
+  "road_edge_inset_assumed": 0.04,
+  "crossroad_near_y_assumed": 2.1,
+  "crossroad_far_y_assumed": 2.72,
+  "rear_island_end_y_assumed": 3.5,
+  "round_island_centre_assumed": [1.65, 3.98],
+  "round_island_radius_assumed": 0.31,
+  "kerb_height_assumed": 0.012,
+  "guardrail_height_assumed": 0.07,
+  "seed": 41,
+  "assumptions": [
+    "X向右，Y向照片远处，Z向上；原点为内部有效场地左近角。",
+    "A为左近、B为右近、C为右远、D为左远；A/B圆弧最高点为0.05m，C/D后端约0.13m。",
+    "AB端中央横向直路保持Z=0；每侧圆弧中部为5cm最高点，圆弧两端平滑降到相邻直路的0高度。峰值位置与坡度分配为近似。",
+    "外围跑道路面边缘半径0.80m，几何宽度0.30m，内半径0.50m。",
+    "中央道路两侧边线中心间距0.62m，中央线宽0.005m；其余留白按用户授权近似。",
+    "后方每侧0.89m直坡先上升0.065m，随后四分之一圆弧继续上升至0.13m；这是可修改的近似分配。",
+    "灰色场地、内部道路与前端横向直路共用Z=0；取消旧版前端整体抬升及侧面直路的前端坡段。",
+    "道路相对位置、外围0.04m留边、护栏、地块、建筑、景观尺寸按照片估计。",
+    "建筑和树木为低多边形近似外形；水池为装饰表面；本项目不含小车。"
+  ]
+}

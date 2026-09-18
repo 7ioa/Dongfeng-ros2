@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>东风沙盘 · 三维场景</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf0ee;color:#253d43;font-family:Inter,"Microsoft YaHei",sans-serif}header{padding:22px 30px 16px;border-bottom:1px solid #d4ddda;background:#f8faf8;display:flex;justify-content:space-between;gap:16px;align-items:center}.eyebrow{font-size:11px;letter-spacing:2.4px;color:#6d8587;margin-bottom:7px}h1{font-size:23px;letter-spacing:.8px;margin:0;font-weight:600}.scale{font-size:14px;color:#4f6b71;text-align:right;line-height:1.7}.scale strong{font-weight:600;font-size:19px}main{position:relative}.toolbar{display:flex;align-items:center;gap:8px;padding:12px 24px;background:#f8faf8;flex-wrap:wrap;border-bottom:1px solid #dae1de}button{padding:9px 15px;border:1px solid #c7d4cf;border-radius:5px;color:#3b555a;background:white;font:inherit;font-size:13px;cursor:pointer}button.active{background:#294e58;color:white;border-color:#294e58}button:focus-visible,input:focus-visible{outline:3px solid #46a6ae;outline-offset:2px}.divider{width:1px;height:22px;background:#d4ded9;margin:0 9px}label{font-size:13px;display:flex;align-items:center;gap:5px;margin-right:7px;cursor:pointer}input{accent-color:#356977}#viewport{height:min(76vh,850px);min-height:430px;position:relative;touch-action:none;background:#edf0ee}canvas{display:block;width:100%;height:100%;touch-action:none}.hint{position:absolute;left:24px;bottom:18px;font-size:12px;color:#536c70;background:#f8faf8e8;padding:9px 12px;border-radius:5px;pointer-events:none}.detail{position:absolute;right:24px;top:16px;max-width:240px;pointer-events:none;font-size:12px;line-height:1.9;color:#4d6870;background:#f8faf8ed;padding:12px 16px;border-left:3px solid #5b939c}.detail strong{font-size:13px;color:#264d55}footer{display:flex;gap:15px;justify-content:space-between;padding:12px 26px 18px;font-size:12px;line-height:1.8;color:#60777b;border-top:1px solid #d4ddda}.fail{padding:35px;white-space:pre-wrap;color:#993f2d} @media(max-width:650px){header{padding:15px 16px}h1{font-size:19px}.scale{font-size:11px}.scale strong{font-size:15px}.toolbar{padding:10px 12px;gap:6px}.divider{display:none}#viewport{min-height:420px;height:65vh}.detail{right:12px;top:12px;font-size:11px;max-width:190px}.hint{left:12px;bottom:12px;font-size:11px}footer{padding:12px 15px;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">DONGFENG · SANDBOX</div><h1>东风沙盘三维场景</h1></div><div class="scale"><strong>3.30 × 5.40 m</strong><br>实际沙盘比例 1:1</div></header>
+<main><div class="toolbar" aria-label="模型查看选项">
+<button id="iso" class="active">整体视角</button><button id="plan">俯视布局</button><button id="side">侧看高差</button>
+<span class="divider"></span>
+<label><input type="checkbox" data-layer="buildings" checked>建筑</label>
+<label><input type="checkbox" data-layer="vegetation" checked>树木</label>
+<label><input type="checkbox" data-layer="street_furniture" checked>设施</label>
+<label><input type="checkbox" data-layer="boundary" checked>围挡</label>
+<label><input type="checkbox" id="dimensions" checked>尺寸</label>
+</div>
+<div id="viewport" role="img" aria-label="可拖动旋转的东风沙盘三维模型，近侧公园在左，高楼群在右，远端为圆形绿岛和灰色场地">
+<div class="detail"><strong>道路与高差</strong><br>单向车道 0.30 m · 中央道路 0.62 m<br>外侧弯道半径 0.80 m<br>AB 中间直路 0 m · 两侧弧顶 0.05 m<br>远端高点 0.13 m · 直坡斜长 0.89 m</div>
+<div class="hint">拖动旋转 · 滚轮缩放 · 右键拖动平移</div>
+</div></main>
+<footer><span>布局、建筑与坡度分配按参考照片近似。尺寸与仿真模型共用同一套几何。</span><span id="status" aria-live="polite">正在载入模型…</span></footer>
+<script id="scene-data" type="application/json">__SCENE_DATA__</script>
+<script type="module">
+__THREE_LIBRARY__
+
+const data=JSON.parse(document.getElementById('scene-data').textContent);
+const viewport=document.getElementById('viewport');
+let renderer;
+try{renderer=new WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});}
+catch(error){document.getElementById('status').textContent='WebGL 不可用';const box=document.createElement('div');box.className='fail';box.textContent='浏览器无法创建三维画面。请在支持 WebGL 的浏览器中打开。\n'+error.message;viewport.appendChild(box);throw error;}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0xedf0ee);renderer.outputColorSpace=SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.shadowMap.type=PCFSoftShadowMap;renderer.toneMapping=ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+viewport.prepend(renderer.domElement);
+const scene=new Scene();const camera=new PerspectiveCamera(37,1,.015,100);camera.up.set(0,0,1);
+scene.add(new HemisphereLight(0xe6f1ff,0x81917d,2.0));
+const sun=new DirectionalLight(0xfff5dd,2.7);sun.position.set(-3,-4,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-5;sun.shadow.camera.right=5;sun.shadow.camera.top=5;sun.shadow.camera.bottom=-5;sun.shadow.camera.near=.1;sun.shadow.camera.far=25;sun.shadow.bias=-.0004;sun.shadow.normalBias=.003;sun.target.position.set(1.65,2.7,0);scene.add(sun,sun.target);
+scene.add(new AmbientLight(0xffffff,.3));
+const layers={};let triangleCount=0;
+function decode(text,Type){const s=atob(text);const bytes=new Uint8Array(s.length);for(let i=0;i<s.length;i++)bytes[i]=s.charCodeAt(i);return new Type(bytes.buffer);}
+for(const m of data.meshes){
+  const geom=new BufferGeometry();geom.setAttribute('position',new BufferAttribute(decode(m.p,Float32Array),3));geom.setAttribute('normal',new BufferAttribute(decode(m.n,Float32Array),3));geom.setIndex(new BufferAttribute(decode(m.i,Uint32Array),1));geom.computeBoundingSphere();triangleCount+=geom.index.count/3;
+  const metallic=['glass','glass_light','steel','frame'].includes(m.material);
+  const mat=new MeshStandardMaterial({color:m.color,metalness:metallic?.18:0,roughness:m.material==='water'?.23:metallic?.48:.87});
+  const mesh=new Mesh(geom,mat);mesh.castShadow=true;mesh.receiveShadow=true;mesh.name=m.layer+'_'+m.material;
+  if(!layers[m.layer]){layers[m.layer]=new Group();layers[m.layer].name=m.layer;scene.add(layers[m.layer]);}layers[m.layer].add(mesh);
+}
+// A quiet ground plane outside the physical model is a preview aid only.
+const plane=new Mesh(new PlaneGeometry(200,200),new MeshStandardMaterial({color:0xedf0ee,roughness:1}));plane.position.z=-.143;plane.receiveShadow=true;scene.add(plane);
+const annotation=new Group();scene.add(annotation);
+function textSprite(text,x,y,z,scale=.25){
+ const canvas=document.createElement('canvas');canvas.width=768;canvas.height=96;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,768,96);ctx.font='500 40px "Microsoft YaHei", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#375b65';ctx.fillText(text,384,48);
+ const texture=new CanvasTexture(canvas);texture.colorSpace=SRGBColorSpace;const sprite=new Sprite(new SpriteMaterial({map:texture,depthTest:false,transparent:true}));sprite.position.set(x,y,z);sprite.scale.set(scale*5.4,scale*.675,1);annotation.add(sprite);
+}
+function dimension(a,b,label,tx,ty,tz){
+ const pts=[new Vector3(...a),new Vector3(...b)];const line=new Line(new BufferGeometry().setFromPoints(pts),new LineBasicMaterial({color:0x577e88,depthTest:false}));annotation.add(line);
+ const v=new Vector3(...b).sub(new Vector3(...a)).normalize();const n=new Vector3(-v.y,v.x,0).multiplyScalar(.045);
+ for(const p of pts)annotation.add(new Line(new BufferGeometry().setFromPoints([p.clone().sub(n),p.clone().add(n)]),new LineBasicMaterial({color:0x577e88,depthTest:false})));
+ textSprite(label,tx,ty,tz,.18);
+}
+dimension([0,-.22,-.02],[3.3,-.22,-.02],'3.30 m',1.65,-.34,.01);
+dimension([-.23,0,-.02],[-.23,5.4,-.02],'5.40 m',-.38,2.7,.02);
+const frontCentre=data.config.road_edge_inset_assumed+data.config.outer_road_radius;
+const crestOffset=(data.config.outer_road_radius-data.config.one_way_width/2)/Math.sqrt(2);
+textSprite('A 弧顶 · 5 cm',frontCentre-crestOffset,frontCentre-crestOffset,.15,.13);
+textSprite('B 弧顶 · 5 cm',data.config.interior_width-frontCentre+crestOffset,frontCentre-crestOffset,.15,.13);
+textSprite('AB 直路 · 0 cm',1.65,.17,.11,.14);
+textSprite('D · 高端 13 cm',.6,5.11,.29,.12);textSprite('C · 高端 13 cm',2.65,5.11,.29,.12);
+let target=new Vector3(1.65,2.65,.05),radius=9.4,azimuth=-Math.PI/2+.13,elevation=.94;
+function positionCamera(){camera.position.set(target.x+radius*Math.cos(elevation)*Math.cos(azimuth),target.y+radius*Math.cos(elevation)*Math.sin(azimuth),target.z+radius*Math.sin(elevation));camera.lookAt(target);}
+function setView(name){
+ target.set(1.65,2.65,.045);
+ if(name==='plan'){azimuth=-Math.PI/2;elevation=Math.PI/2-.0001;radius=9.0;}
+ else if(name==='side'){azimuth=0;elevation=.13;radius=9.0;target.set(1.65,2.7,.10);}
+ else{azimuth=-Math.PI/2+.13;elevation=.94;radius=9.4;}
+ for(const n of ['iso','plan','side'])document.getElementById(n).classList.toggle('active',n===name);
+ positionCamera();render();
+}
+function render(){renderer.render(scene,camera);}
+function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();positionCamera();render();}
+new ResizeObserver(resize).observe(viewport);
+for(const n of ['iso','plan','side'])document.getElementById(n).addEventListener('click',()=>setView(n));
+for(const input of document.querySelectorAll('[data-layer]'))input.addEventListener('change',()=>{if(layers[input.dataset.layer])layers[input.dataset.layer].visible=input.checked;render();});
+document.getElementById('dimensions').addEventListener('change',e=>{annotation.visible=e.target.checked;render();});
+let drag=null;const canvas=renderer.domElement;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,pan:e.button===2||e.shiftKey};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;
+ if(drag.pan){const factor=radius*.00085;target.x+=factor*(Math.sin(azimuth)*dx+Math.cos(azimuth)*dy);target.y+=factor*(-Math.cos(azimuth)*dx+Math.sin(azimuth)*dy);}
+ else{azimuth-=dx*.006;elevation=Math.max(.035,Math.min(Math.PI/2-.0001,elevation+dy*.0045));}
+ positionCamera();render();});
+canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
+canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(1.0,Math.min(20,radius*Math.exp(e.deltaY*.001)));positionCamera();render();},{passive:false});
+document.getElementById('status').textContent=Math.round(triangleCount/1000)+'k 三角面 · 米制模型';
+resize();setView(new URLSearchParams(location.search).get('view')||'iso');
+document.documentElement.dataset.ready='true';
+</script>
+</body></html>

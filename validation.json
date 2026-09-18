@@ -1,0 +1,38 @@
+{
+  "finite_geometry": true,
+  "valid_triangle_indices": true,
+  "interior_dimensions_m": [
+    3.3,
+    5.4
+  ],
+  "perimeter_width_min_max_m": [
+    0.29999999999999916,
+    0.30000000000000077
+  ],
+  "outer_curve_radius_m": 0.8,
+  "inner_curve_radius_m": 0.5,
+  "central_white_line_spacing_m": 0.62,
+  "front_curve_height_m": 0.05,
+  "front_straight_height_min_max_m": [
+    0.0,
+    0.0
+  ],
+  "front_curve_peaks_m": {
+    "A": 0.05,
+    "B": 0.05
+  },
+  "front_curve_profile": "Zero-height straight joins, smooth 5 cm crest at each arc midpoint.",
+  "rear_height_m": 0.13,
+  "rear_straight_slope_length_m": 0.89,
+  "maximum_adjacent_road_height_step_m": 0.0024149636349473647,
+  "closing_segment_length_m": 0.01570758104346278,
+  "closing_segment_note": "The final section is connected to the first by mesh faces; this is a segment length, not a gap.",
+  "road_cross_sections": 764,
+  "visual_mesh_groups": 34,
+  "visual_triangles": 113210,
+  "trees": 206,
+  "collision_triangles": 50000,
+  "gazebo_runtime_test": "Not run: Gazebo Harmonic is not installed on the Windows build host.",
+  "sdf_xml_and_asset_references": "passed",
+  "resolved_references": 43
+}

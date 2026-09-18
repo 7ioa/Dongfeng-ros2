@@ -1,0 +1,16 @@
+{
+  "description": "AB端至中央十字路口南侧的标线；位置和箭头轮廓按实物照片近似。单位为米。",
+  "near_stop_y": 0.65,
+  "near_stop_thickness": 0.01,
+  "near_arrow_y": 0.80,
+  "junction_arrow_offset_from_crossroad": 0.29,
+  "crosswalk_offset_from_crossroad": 0.035,
+  "crosswalk_depth": 0.09,
+  "crosswalk_stripe_width": 0.014,
+  "crosswalk_stripe_pitch": 0.026,
+  "front_transverse_line_x": [0.845, 1.145, 2.155, 2.455],
+  "front_transverse_line_y": [0.04, 0.43],
+  "front_transverse_line_width": 0.007,
+  "front_combination_arrow_position": [0.995, 0.18],
+  "outer_side_stop_y": 1.32
+}

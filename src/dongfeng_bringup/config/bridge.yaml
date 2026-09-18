@@ -1,0 +1,44 @@
+# ros_gz_bridge topics for the Dongfeng differential-drive car.
+#
+# The Gazebo side of every pair is named explicitly by the DiffDrive and
+# JointStatePublisher plugins inside dongfeng_car.urdf.xacro, so nothing here
+# depends on the model name.
+#
+# direction: GZ_TO_ROS  Gazebo -> ROS 2
+#            ROS_TO_GZ  ROS 2  -> Gazebo
+#            BIDIRECTIONAL
+
+# Simulation clock, so ROS 2 nodes can use sim time if they want to.
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# Only guarded commands cross into Gazebo. The public ROS input is /cmd_vel.
+- ros_topic_name: "/cmd_vel_safe"
+  gz_topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  gz_type_name: "gz.msgs.Twist"
+  direction: ROS_TO_GZ
+
+# Wheel odometry computed by the DiffDrive plugin.
+- ros_topic_name: "/odom"
+  gz_topic_name: "/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
+# odom -> base_link, published by DiffDrive as gz Pose_V.
+- ros_topic_name: "/tf"
+  gz_topic_name: "/tf"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+
+# Wheel joint positions, used by robot_state_publisher for the wheel transforms.
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
