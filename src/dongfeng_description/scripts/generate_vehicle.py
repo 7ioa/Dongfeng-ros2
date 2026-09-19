@@ -424,15 +424,19 @@ def export():
     for mat in COLORS:text.append(f'newmtl {mat}\nKd '+xyz(rgb(mat))+f'\nKa 0.2 0.2 0.2\nKs {"0.7 0.7 0.7" if mat in METALLIC else "0.05 0.05 0.05"}\nNs {80 if mat=="teal" else 20}\n')
     (MESH_DIR/'vehicle.mtl').write_text('\n'.join(text),encoding='utf-8')
     write_urdf();items=assembled_arrays()
-    output=WORKSPACE/'vehicle_preview';output.mkdir(exist_ok=True)
+    output=WORKSPACE/'previews/vehicle'
+    export_dir=WORKSPACE/'exports/vehicle'
+    report_dir=WORKSPACE/'reports/vehicle'
+    for directory in (output,export_dir,report_dir):
+        directory.mkdir(parents=True,exist_ok=True)
     data=[]
     for name,part,mat,v,f,n in items:
         enc=lambda a:base64.b64encode(a.tobytes()).decode('ascii')
         data.append({'name':name,'part':part,'material':mat,'color':COLORS[mat],'metalness':METALLIC.get(mat,0),'p':enc(v.astype('<f4')),'i':enc(f.astype('<u4')),'n':enc(n.astype('<f4'))})
     (output/'vehicle-data.json').write_text(json.dumps({'meshes':data,'wheel_radius':R,'sensors':{'lidar':LIDAR,'camera':CAMERA}},separators=(',',':')),encoding='utf-8')
-    write_glb(items,output/'dongfeng_car.glb')
+    write_glb(items,export_dir/'dongfeng_car.glb')
     allv=np.concatenate([a[3] for a in items]);report={'visual_triangles':sum(len(a[4]) for a in items),'visual_mesh_files':len(M),'bounds_min_m':allv.min(axis=0).tolist(),'bounds_max_m':allv.max(axis=0).tolist(),'wheel_radius_m':R,'wheelbase_m':2*AXLE,'track_m':TRACK,'body_length_m':BODY_L,'body_width_m':BODY_W,'total_mass_kg':1.502,'sensors':'Visual models and frames only; no camera or lidar data yet.','dimensional_basis':'Existing 0.20 m length and supplied photographs, not measured.'}
-    (output/'geometry_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report,indent=2))
+    (report_dir/'geometry_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report,indent=2))
 
 if __name__=='__main__':
     build_body();build_upper();build_wheel('wheel_left',1);build_wheel('wheel_right',-1);build_sensors();export()

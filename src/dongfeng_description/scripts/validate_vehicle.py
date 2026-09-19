@@ -87,7 +87,7 @@ def main():
         uri=m.get('filename');assert uri.startswith('package://dongfeng_description/')
         relative=uri.removeprefix('package://dongfeng_description/');path=PACKAGE/relative
         assert path.is_file();mesh_files[path.stem]=obj(path)
-    data=json.loads((ROOT/'vehicle_preview/vehicle-data.json').read_text());triangles=0;points=[]
+    data=json.loads((ROOT/'previews/vehicle/vehicle-data.json').read_text());triangles=0;points=[]
     for m in data['meshes']:
         # Material names may contain underscores; split with the explicit suffix.
         suffix='_'+m['material'];prefix=m['name'][:-len(suffix)];part,index=prefix.rsplit('_',1)
@@ -104,7 +104,7 @@ def main():
         assert np.allclose(pn,n,atol=2e-8);triangles+=len(f);points.append(pv)
     points=np.concatenate(points);assert np.isclose(points[:,2].min(),-radius,atol=1e-5)
     # Validate GLB buffer structure and that each exported primitive is complete.
-    raw=(ROOT/'vehicle_preview/dongfeng_car.glb').read_bytes();magic,version,length=struct.unpack_from('<III',raw)
+    raw=(ROOT/'exports/vehicle/dongfeng_car.glb').read_bytes();magic,version,length=struct.unpack_from('<III',raw)
     assert magic==0x46546c67 and version==2 and length==len(raw)
     jslen,jstype=struct.unpack_from('<II',raw,12);assert jstype==0x4e4f534a
     glb=json.loads(raw[20:20+jslen]);binlen,bintype=struct.unpack_from('<II',raw,20+jslen);assert bintype==0x004e4942
@@ -124,7 +124,8 @@ def main():
                     if path.is_file() and '__pycache__' not in path.parts:
                         assert path.read_bytes()==(target/path.relative_to(source)).read_bytes(),path;count+=1
         report['matching_installed_files']=count
-    (ROOT/'vehicle_preview/validation_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    report_dir=ROOT/'reports/vehicle';report_dir.mkdir(parents=True,exist_ok=True)
+    (report_dir/'validation_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps(report,indent=2))
 
 if __name__=='__main__':main()

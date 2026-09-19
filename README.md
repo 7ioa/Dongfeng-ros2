@@ -2,9 +2,28 @@
 
 根据提供的 6 张场景参考照片和实测尺寸生成。整体采用实际沙盘尺寸，单位为米。道路、建筑和景观都是三维网格；可以旋转查看、导入 Blender，并作为 Gazebo 的静态实验场景。
 
+## 目录速览
+
+项目根目录中的各个主要子文件夹按用途划分如下，查找或修改文件时可以先看这里：
+
+| 子文件夹 | 大致内容 |
+|---|---|
+| `config/` | 地图配置。`scene/` 中保存沙盘尺寸、道路标线、B 区建筑和湖形等参数。 |
+| `docs/` | 项目文档。目前包含迁移交接说明，记录已完成的工作、使用约定和待验证事项。 |
+| `exports/` | 供 Blender 等软件导入的三维模型。`scene/` 保存地图的 OBJ、MTL、GLB 文件；`vehicle/` 保存小车的 GLB 文件。 |
+| `previews/` | 用于查看外观的离线网页、模型预览数据和截图。`scene/` 对应地图，`vehicle/` 对应小车，各自的 `index.html` 可直接用浏览器打开。 |
+| `reports/` | 已有检查结果。`scene/` 保存地图几何与局部修改记录，`vehicle/` 保存小车模型检查报告，`control/` 保存控制逻辑检查报告。 |
+| `scripts/` | 项目辅助脚本，包括 ROS 环境检查和编译入口；`scene/` 中是地图生成、导出检查、离线预览构建和 Blender 导入脚本。 |
+| `src/` | ROS 2 源码。`dongfeng_bringup/` 负责仿真启动、话题桥接和键盘控制；`dongfeng_description/` 保存小车结构、网格及小车建模与验证脚本。 |
+| `models/` | Gazebo 使用的静态地图模型。`dongfeng_sandbox/` 中包含模型说明、SDF 文件，以及 `meshes/` 下的显示网格、碰撞网格和材质。 |
+| `worlds/` | Gazebo 世界文件。目前的 `dongfeng.sdf` 配置地图加载、光照、物理系统和仿真界面。 |
+| `viewer/` | 离线预览的网页模板与共享依赖。`vendor/` 中保存 Three.js 等查看器所用的第三方代码，生成预览时会将所需内容嵌入网页。 |
+
+常用入口：[地图预览](previews/scene/index.html) · [小车预览](previews/vehicle/index.html) · [迁移交接说明](docs/迁移交接说明.md)。地图与小车启动、键盘控制见[第 8 节](#8-地图与四轮小车键盘驾驶)。
+
 ## 1. 先查看模型
 
-**双击 `preview.html`，用 Edge 或 Chrome 打开即可。** 文件包含全部模型数据和查看器，不需要联网，也不需要先安装 ROS 2、Gazebo 或 Blender。
+**双击 `previews/scene/index.html`，用 Edge 或 Chrome 打开即可。** 文件包含全部模型数据和查看器，不需要联网，也不需要先安装 ROS 2、Gazebo 或 Blender。
 
 - 左键拖动：旋转；滚轮：缩放；右键拖动：平移。
 - “整体视角”：查看完整场景。
@@ -14,29 +33,52 @@
 
 ## 2. 文件怎么用
 
+根目录保留 README、第三方许可说明和三个常用启动脚本，其余文件按用途归类。下文命令均在项目根目录执行。
+
+```text
+dongfeng_sandbox/
+├── README.md                  # 项目说明
+├── THIRD_PARTY_NOTICES.md      # 第三方许可
+├── launch_car.sh              # 地图与小车
+├── keyboard_control.sh        # 键盘驾驶
+├── launch_gazebo.sh            # 仅查看地图
+├── config/scene/              # 地图尺寸、标线、建筑与湖形参数
+├── docs/                      # 迁移交接说明
+├── exports/{scene,vehicle}/    # 导出模型，供 Blender 等软件使用
+├── previews/{scene,vehicle}/   # 离线预览、预览数据与截图
+├── reports/{scene,vehicle,control}/ # 模型与控制检查报告
+├── scripts/                   # 环境与编译工具；scene/ 下为地图建模工具
+├── src/                       # ROS 2 小车描述与控制包
+├── models/                    # Gazebo 地图模型和碰撞资源
+├── worlds/                    # Gazebo 世界
+└── viewer/                    # 地图预览模板与共享 Three.js 库
+```
+
+`previews`、`exports` 和 `reports` 内的 `scene` 表示地图，`vehicle` 表示小车。小车生成与验证脚本仍在 `src/dongfeng_description/scripts/`。重新生成时，输出会写回对应子目录。预览截图和历史局部检查记录需单独更新。
+
 | 文件 / 文件夹 | 用途 |
 |---|---|
-| `preview.html` | 可离线打开的交互式三维预览 |
-| `dongfeng_sandbox.glb` | 带材质的单文件 3D 模型，建议用它导入 Blender |
-| `dongfeng_sandbox.obj` + `.mtl` | 通用网格和材质，二者放在同一个目录 |
+| `previews/scene/index.html` | 可离线打开的交互式三维预览 |
+| `exports/scene/dongfeng_sandbox.glb` | 带材质的单文件 3D 模型，建议用它导入 Blender |
+| `exports/scene/dongfeng_sandbox.obj` + `.mtl` | 通用网格和材质，二者放在同一个目录 |
 | `models/dongfeng_sandbox/` | Gazebo 静态场景模型，含显示网格和碰撞网格 |
 | `worlds/dongfeng.sdf` | Gazebo 场景，包括光源、物理系统和查看窗口配置 |
 | `launch_gazebo.sh` | 在 Ubuntu 中设置资源路径并启动场景 |
-| `scene_config.json` | 实测尺寸与本次采用的估计参数 |
-| `front_markings.json` | AB 端至中央路口南侧的标线位置、斑马线间距等参数 |
-| `b_buildings.json` | B 区楼体轮廓、位置、朝向、高度及组合高楼连接段的参数 |
-| `b_lake.json` | B 区细长湖和右侧水道的曲线控制点、岸宽与表面高度 |
-| `generate_scene.py` | 生成所有三维几何和仿真资源的 Python 源码 |
-| `build_preview.py` | 根据生成的网格更新离线预览 |
-| `validate_exports.py` | 独立读取导出文件，检查 GLB、OBJ 和道路碰撞网格 |
-| `validation.json`、`export_validation.json` | 本次生成与导出检查结果 |
-| `ab_height_check.png` | 本次 AB 端修正后的路面高度检查图；之后自行修改模型时需另行更新此图 |
-| `front_markings_preview.png` | 本次前段标线的俯视核对图，直接读取模型网格绘制；为便于核对隐藏了建筑、树木和设施 |
-| `front_markings_validation.json` | 本次标线修改范围的核对记录；之后重新生成模型不会自动刷新此记录 |
-| `b_buildings_preview.png`、`b_buildings_rear.png`、`b_buildings_plan.png` | 更新后的 B 区建筑正面、背面与俯视预览，来自实际导出模型的浏览器渲染 |
-| `b_buildings_validation.json` | 本次 B 区修改范围及占地核对记录，之后重新生成模型不会自动刷新此记录 |
-| `b_lake_preview.png`、`b_lake_validation.json` | 两栋 L 形低楼与细长湖调整后的局部预览、修改范围及湖岸检查记录 |
-| `import_to_blender.py` | 可选：在 Blender 中建立新场景并保存 `.blend` |
+| `config/scene/scene_config.json` | 实测尺寸与本次采用的估计参数 |
+| `config/scene/front_markings.json` | AB 端至中央路口南侧的标线位置、斑马线间距等参数 |
+| `config/scene/b_buildings.json` | B 区楼体轮廓、位置、朝向、高度及组合高楼连接段的参数 |
+| `config/scene/b_lake.json` | B 区细长湖和右侧水道的曲线控制点、岸宽与表面高度 |
+| `scripts/scene/generate_scene.py` | 生成所有三维几何和仿真资源的 Python 源码 |
+| `scripts/scene/build_preview.py` | 根据生成的网格更新离线预览 |
+| `scripts/scene/validate_exports.py` | 独立读取导出文件，检查 GLB、OBJ 和道路碰撞网格 |
+| `reports/scene/validation.json`、`reports/scene/export_validation.json` | 本次生成与导出检查结果 |
+| `previews/scene/ab_height_check.png` | 本次 AB 端修正后的路面高度检查图；之后自行修改模型时需另行更新此图 |
+| `previews/scene/front_markings_preview.png` | 本次前段标线的俯视核对图，直接读取模型网格绘制；为便于核对隐藏了建筑、树木和设施 |
+| `reports/scene/front_markings_validation.json` | 本次标线修改范围的核对记录；之后重新生成模型不会自动刷新此记录 |
+| `previews/scene/b_buildings_preview.png`、`previews/scene/b_buildings_rear.png`、`previews/scene/b_buildings_plan.png` | 更新后的 B 区建筑正面、背面与俯视预览，来自实际导出模型的浏览器渲染 |
+| `reports/scene/b_buildings_validation.json` | 本次 B 区修改范围及占地核对记录，之后重新生成模型不会自动刷新此记录 |
+| `previews/scene/b_lake_preview.png`、`reports/scene/b_lake_validation.json` | 两栋 L 形低楼与细长湖调整后的局部预览、修改范围及湖岸检查记录 |
+| `scripts/scene/import_to_blender.py` | 可选：在 Blender 中建立新场景并保存 `.blend` |
 
 ## 3. 在 Ubuntu 24 虚拟机里加载
 
@@ -77,17 +119,17 @@ gz sim -r worlds/dongfeng.sdf
 
 ## 4. 在 Blender 里继续修改
 
-推荐通过“文件 → 导入 → glTF 2.0”选择 `dongfeng_sandbox.glb`。模型以米为单位，GLB 已包含坐标轴转换，不要再缩放 100 倍或 1000 倍。切换到材质预览即可查看颜色。
+推荐通过“文件 → 导入 → glTF 2.0”选择 `exports/scene/dongfeng_sandbox.glb`。模型以米为单位，GLB 已包含坐标轴转换，不要再缩放 100 倍或 1000 倍。切换到材质预览即可查看颜色。
 
 如果用 OBJ，导入时采用 **Y Forward、Z Up，缩放 1**，并保留旁边的 MTL。对象按功能和材质分组，例如建筑、道路、植被和标线；同一材质下的多栋建筑可能位于同一个网格对象，需要时可在编辑模式按松散部件分离。
 
 可选的命令行转换：
 
 ```bash
-blender --background --python import_to_blender.py
+blender --background --python scripts/scene/import_to_blender.py
 ```
 
-该脚本创建新场景，导入 OBJ，并将结果保存为模型文件夹中的 `dongfeng_sandbox.blend`。交付包目前提供 GLB 和 OBJ；`.blend` 需要在装有 Blender 的电脑上生成。该转换脚本尚未在本机运行。
+该脚本创建新场景，导入 OBJ，并将结果保存为 `exports/scene/dongfeng_sandbox.blend`。交付包目前提供 GLB 和 OBJ；`.blend` 需要在装有 Blender 的电脑上生成。该转换脚本尚未在本机运行。
 
 ## 5. 坐标和尺寸
 
@@ -136,7 +178,7 @@ blender --background --python import_to_blender.py
 
 标线形状和位置按实物照片近似，尚未进行照片测量标定。只更新本段标线；建筑、信号灯、树木、路面高度、碰撞网格和后段标线保持原样。
 
-本项目的“路面贴图”采用紧贴路面的白色网格绘制，因此修改 `front_markings.json` 可调整位置、尺寸和间距；箭头轮廓在 `generate_scene.py` 的 `foreground_arrow()` 中，前段布置在 `build_foreground_markings()` 中。`front_markings_preview.png` 是本次核对图，自行改动后不会随生成脚本自动更新；以重新生成的 `preview.html` 为准。
+本项目的“路面贴图”采用紧贴路面的白色网格绘制，因此修改 `config/scene/front_markings.json` 可调整位置、尺寸和间距；箭头轮廓在 `scripts/scene/generate_scene.py` 的 `foreground_arrow()` 中，前段布置在 `build_foreground_markings()` 中。`previews/scene/front_markings_preview.png` 是本次核对图，自行改动后不会随生成脚本自动更新；以重新生成的 `previews/scene/index.html` 为准。
 
 ### B 区建筑重建
 
@@ -147,7 +189,7 @@ blender --background --python import_to_blender.py
 
 尺寸与位置依照照片近似，未新增建筑实测数据。建筑重建时曾保留旧湖，并据此适配低楼；下述局部调整已进一步纠正低楼与湖的相对位置。建筑实体的碰撞网格同步更新。
 
-今后可修改 `b_buildings.json`：`origin` 为平面位置，`outline` 为相对于该位置的建筑轮廓，`yaw` 为绕竖直轴旋转的弧度，`height` 为楼体高度；组合高楼用 `bounds` 指定矩形范围，用 `bottom` 指定相对于基座的起始高度。外观细节在 `generate_scene.py` 的 `b_volume()`、`b_facade()` 和 `build_b_district()` 中。三张 B 区 PNG 为本次渲染记录，不会随生成脚本自动刷新。
+今后可修改 `config/scene/b_buildings.json`：`origin` 为平面位置，`outline` 为相对于该位置的建筑轮廓，`yaw` 为绕竖直轴旋转的弧度，`height` 为楼体高度；组合高楼用 `bounds` 指定矩形范围，用 `bottom` 指定相对于基座的起始高度。外观细节在 `scripts/scene/generate_scene.py` 的 `b_volume()`、`b_facade()` 和 `build_b_district()` 中。三张 B 区 PNG 为本次渲染记录，不会随生成脚本自动刷新。
 
 ### 本次两栋 L 形低楼与湖的局部调整
 
@@ -155,7 +197,7 @@ blender --background --python import_to_blender.py
 - 湖的主体移到低楼后方，改为更细长的轮廓，向右前方收窄并连接细水道；岸边使用窄灰色边缘。
 - 高楼、后排开口低楼、地块边界、树木、路灯、道路、标线、原有步道及 A 区水池均保持原样。未更新 ZIP。
 
-湖形由 `b_lake.json` 的连续三次贝塞尔曲线生成，每段 `curves` 中依次是两个控制点和终点，`start` 是第一段起点。`bank_width` 为灰色岸边宽度。这些曲线按照片近似，没有新增实测数据。
+湖形由 `config/scene/b_lake.json` 的连续三次贝塞尔曲线生成，每段 `curves` 中依次是两个控制点和终点，`start` 是第一段起点。`bank_width` 为灰色岸边宽度。这些曲线按照片近似，没有新增实测数据。
 
 ### 停车场出入口与道闸修正
 
@@ -167,7 +209,7 @@ blender --background --python import_to_blender.py
 - 两个立柱改为完整的道闸：只有一根立柱，立在场地前角（黄色基座）。**立杆与横杆是同一根杆**——竖直升到横杆高度后折 90° 变成悬挑横杆，拐角上方不再有竖杆；杆身白色带红带（立杆两段、横杆三段）。控制柜在立柱内侧。开口另一端不设立柱。两个道闸完全相同，不区分进口与出口。
 - 原在 (0.65, 4.15) 和 (2.65, 4.15) 的两盏路灯移到开口靠内侧的边界上（x=0.90 / 2.40），避免立在车道上。
 
-开口范围和道闸位置由 `generate_scene.py` 中的 `yard_front_y()`、`YARD_OPENINGS`、`YARD_GATE_LAMPS` 与 `yard_gate()` 统一控制。清除树木时仍会照常抽取随机数，因此其余 206 株树的叶片配色与位置与修改前完全一致。道路、建筑、地块、围挡、桥面、标线和碰撞网格均未改动。
+开口范围和道闸位置由 `scripts/scene/generate_scene.py` 中的 `yard_front_y()`、`YARD_OPENINGS`、`YARD_GATE_LAMPS` 与 `yard_gate()` 统一控制。清除树木时仍会照常抽取随机数，因此其余 206 株树的叶片配色与位置与修改前完全一致。道路、建筑、地块、围挡、桥面、标线和碰撞网格均未改动。
 
 ### 重新生成
 
@@ -175,12 +217,12 @@ Python 生成程序只依赖 `numpy`：
 
 ```bash
 python3 -m pip install numpy
-python3 generate_scene.py
-python3 validate_exports.py
-python3 build_preview.py
+python3 scripts/scene/generate_scene.py
+python3 scripts/scene/validate_exports.py
+python3 scripts/scene/build_preview.py
 ```
 
-尺寸参数在 `scene_config.json`，前段标线参数在 `front_markings.json`，B 区建筑参数在 `b_buildings.json`，B 区湖形在 `b_lake.json`；修改后执行上述三个脚本。其余建筑、地块细节与部分景观坐标写在 `generate_scene.py` 中。该生成器针对当前 3.3 × 5.4 m 沙盘编写；大幅改动总尺寸时，也需要调整源码中的建筑和道路位置。重新生成会覆盖同名导出文件，手工修改后的模型请另存。
+尺寸参数在 `config/scene/scene_config.json`，前段标线参数在 `config/scene/front_markings.json`，B 区建筑参数在 `config/scene/b_buildings.json`，B 区湖形在 `config/scene/b_lake.json`；修改后执行上述三个脚本。其余建筑、地块细节与部分景观坐标写在 `scripts/scene/generate_scene.py` 中。该生成器针对当前 3.3 × 5.4 m 沙盘编写；大幅改动总尺寸时，也需要调整源码中的建筑和道路位置。重新生成会覆盖同名导出文件，手工修改后的模型请另存。
 
 ## 7. 验证情况与导航实验接口
 
@@ -194,8 +236,8 @@ python3 build_preview.py
 - 道路碰撞体闭合检查：无开放边、无非流形边、无方向不一致的相邻边。
 - SDF XML 可解析，模型资源引用均存在。
 - 前一次标线更新已核对：该次修改的 44 个非标线资源文件内容保持一致，Y>2.12 m 的 3172 个后段标线三角面保持一致；前段标线朝上，且已生成俯视核对图。
-- 前一次 B 区建筑重建已核对：该次修改的 38 个受保护文件（包含原 ZIP）内容不变，其他区域建筑的 2898 个显示与碰撞三角面保持一致；历史记录见 `b_buildings_validation.json`。
-- 本次低楼与湖调整核对 40 个受保护文件和 6 组混合网格中的保留三角面；湖岸无自交，低楼与湖的位置按 3 mm 间距检查，结果见 `b_lake_validation.json`。PNG 为浏览器预览，非 Gazebo 截图。
+- 前一次 B 区建筑重建已核对：该次修改的 38 个受保护文件（包含原 ZIP）内容不变，其他区域建筑的 2898 个显示与碰撞三角面保持一致；历史记录见 `reports/scene/b_buildings_validation.json`。
+- 本次低楼与湖调整核对 40 个受保护文件和 6 组混合网格中的保留三角面；湖岸无自交，低楼与湖的位置按 3 mm 间距检查，结果见 `reports/scene/b_lake_validation.json`。PNG 为浏览器预览，非 Gazebo 截图。
 
 模型约 11.3 万个显示三角面、5.0 万个碰撞三角面，包含 206 株简化树木。静态道路、建筑、路缘、树干、挡板和部分设施设有碰撞几何；水面、标线、树冠和小型立面装饰主要用于外观显示。
 
@@ -303,7 +345,7 @@ TF 树：`odom → base_link` 由 DiffDrive 经 gz `/tf` 桥接发布。四个�
 
 `base_link` 位于轮轴平面，轮胎落地后距地面约 0.028 m。运动暂采用四轮差速近似，保持 `/cmd_vel`、`/odom` 等接口；没有根据真实底盘标定转向方式、摩擦和惯量。两侧各配置两个驱动关节，使用 Gazebo DiffDrive 的多关节配置（[官方接口说明](https://gazebosim.org/api/sim/8/classgz_1_1sim_1_1systems_1_1DiffDrive.html)）。碰撞使用简化车体和圆柱轮胎，细小外观零件不逐个参与碰撞。
 
-**查看小车：** 用浏览器打开本目录的 `vehicle_preview.html`，可切换车头、侧面、车尾、俯视，也可拖动旋转。它独立于地图的 `preview.html`。`vehicle_preview/dongfeng_car.glb` 可导入 Blender 等建模软件查看整体外形；Gazebo 使用的是包内 OBJ 网格和 URDF。
+**查看小车：** 用浏览器打开本目录的 `previews/vehicle/index.html`，可切换车头、侧面、车尾、俯视，也可拖动旋转。它独立于地图的 `previews/scene/index.html`。`exports/vehicle/dongfeng_car.glb` 可导入 Blender 等建模软件查看整体外形；Gazebo 使用的是包内 OBJ 网格和 URDF。
 
 **修改外形：** 编辑 `src/dongfeng_description/scripts/generate_vehicle.py`，其中顶部是主要尺寸，`build_body()`、`build_upper()`、`build_wheel()`、`build_sensors()` 分别构建车壳、上层结构、轮子和传感器。该生成器只处理小车，不调用地图生成脚本。
 
@@ -328,7 +370,7 @@ source install_control/local_setup.bash
 
 SLAM、Nav2、激光扫描、相机图像生成、视觉算法和传感器融合。摄像头和雷达外形及坐标已经完成，后续可在这些坐标系上接入仿真传感器。
 
-此次已完成五方向浏览器预览、URDF/OBJ/GLB 静态检查、四轮坐标核对，以及 11 项键盘/超时/限速控制回归检查。出生位置覆盖范围内的 775 个地面采样点高度均为 0，初始轮胎距路面 3 mm，用于重力落地。地图与压缩包内容未改变。检查结果见 `vehicle_preview/validation_report.json`、`control_validation.json`。
+此次已完成五方向浏览器预览、URDF/OBJ/GLB 静态检查、四轮坐标核对，以及 11 项键盘/超时/限速控制回归检查。出生位置覆盖范围内的 775 个地面采样点高度均为 0，初始轮胎距路面 3 mm，用于重力落地。地图与压缩包内容未改变。检查结果见 `reports/vehicle/validation_report.json`、`reports/control/control_validation.json`。
 
 可独立复查控制逻辑（无需启动 ROS）：
 

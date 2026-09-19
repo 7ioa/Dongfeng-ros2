@@ -8,11 +8,15 @@ import json, math, random, struct, re, xml.etree.ElementTree as ET
 from collections import defaultdict
 import numpy as np
 
-ROOT = Path(__file__).resolve().parent
-CFG = json.loads((ROOT / 'scene_config.json').read_text(encoding='utf-8'))
-FRONT_MARKINGS = json.loads((ROOT / 'front_markings.json').read_text(encoding='utf-8'))
-B_BUILDINGS = json.loads((ROOT / 'b_buildings.json').read_text(encoding='utf-8'))
-B_LAKE = json.loads((ROOT / 'b_lake.json').read_text(encoding='utf-8'))
+ROOT = Path(__file__).resolve().parents[2]
+CONFIG_DIR = ROOT / 'config/scene'
+EXPORT_DIR = ROOT / 'exports/scene'
+PREVIEW_DIR = ROOT / 'previews/scene'
+REPORT_DIR = ROOT / 'reports/scene'
+CFG = json.loads((CONFIG_DIR / 'scene_config.json').read_text(encoding='utf-8'))
+FRONT_MARKINGS = json.loads((CONFIG_DIR / 'front_markings.json').read_text(encoding='utf-8'))
+B_BUILDINGS = json.loads((CONFIG_DIR / 'b_buildings.json').read_text(encoding='utf-8'))
+B_LAKE = json.loads((CONFIG_DIR / 'b_lake.json').read_text(encoding='utf-8'))
 W, L = CFG['interior_width'], CFG['interior_length']
 random.seed(CFG['seed'])
 TAU = math.tau
@@ -864,11 +868,14 @@ def validate(arrays):
             if elem.text.startswith('model://'):
                 target=ROOT/'models'/elem.text[8:];assert target.exists(),str(target);refs.append(str(target.relative_to(ROOT)))
     checks['sdf_xml_and_asset_references']='passed';checks['resolved_references']=len(refs)
-    (ROOT/'validation.json').write_text(json.dumps(checks,indent=2,ensure_ascii=False),encoding='utf-8')
+    REPORT_DIR.mkdir(parents=True,exist_ok=True)
+    (REPORT_DIR/'validation.json').write_text(json.dumps(checks,indent=2,ensure_ascii=False),encoding='utf-8')
     return checks
 
 def export_all():
     model_dir=ROOT/'models'/'dongfeng_sandbox';mesh_dir=model_dir/'meshes';mesh_dir.mkdir(parents=True,exist_ok=True);(ROOT/'worlds').mkdir(exist_ok=True)
+    for directory in (EXPORT_DIR, PREVIEW_DIR):
+        directory.mkdir(parents=True,exist_ok=True)
     arrays={k:m.arrays() for k,m in BUCKETS.items() if m.f}
     for (layer,mat),m in BUCKETS.items():write_obj(mesh_dir/f'{layer}_{mat}.obj',m,mat)
     for name,m in COLLISION.items():write_obj(mesh_dir/f'collision_{name}.obj',m)
@@ -876,7 +883,7 @@ def export_all():
     for mat,color in PALETTE.items():mtl.append(f'newmtl {mat}\nKd '+' '.join(map(str,rgb(color)))+'\nKa 0.2 0.2 0.2\nKs 0.12 0.12 0.12\nNs 20\n')
     (mesh_dir/'scene.mtl').write_text('\n'.join(mtl),encoding='utf-8')
     # A single easy-to-import OBJ alongside the model, retaining layer/material groups.
-    with (ROOT/'dongfeng_sandbox.obj').open('w',encoding='utf-8',newline='\n') as out:
+    with (EXPORT_DIR/'dongfeng_sandbox.obj').open('w',encoding='utf-8',newline='\n') as out:
         out.write('mtllib dongfeng_sandbox.mtl\n');count=0
         for (layer,mat),(v,f,n) in arrays.items():
             out.write(f'o {layer}_{mat}\nusemtl {mat}\n')
@@ -884,15 +891,15 @@ def export_all():
             for a in n:out.write('vn %.6f %.6f %.6f\n'%tuple(a))
             for tri in f:out.write('f '+' '.join(f'{int(i)+1+count}//{int(i)+1+count}' for i in tri)+'\n')
             count+=len(v)
-    (ROOT/'dongfeng_sandbox.mtl').write_text('\n'.join(mtl),encoding='utf-8')
-    write_glb(ROOT/'dongfeng_sandbox.glb',arrays);write_sdf(model_dir)
+    (EXPORT_DIR/'dongfeng_sandbox.mtl').write_text('\n'.join(mtl),encoding='utf-8')
+    write_glb(EXPORT_DIR/'dongfeng_sandbox.glb',arrays);write_sdf(model_dir)
     # Compact base64 typed arrays, reused verbatim by the WebGL preview.
     import base64
     data=[]
     for (layer,mat),(v,f,n) in arrays.items():
         enc=lambda a:base64.b64encode(a.tobytes()).decode('ascii')
         data.append(dict(layer=layer,material=mat,color=PALETTE[mat],p=enc(v.astype('<f4')),n=enc(n.astype('<f4')),i=enc(f.astype('<u4'))))
-    (ROOT/'viewer'/'scene-data.json').write_text(json.dumps(dict(meshes=data,features=FEATURES,config=CFG),separators=(',',':'),ensure_ascii=False),encoding='utf-8')
+    (PREVIEW_DIR/'scene-data.json').write_text(json.dumps(dict(meshes=data,features=FEATURES,config=CFG),separators=(',',':'),ensure_ascii=False),encoding='utf-8')
     report=validate(arrays)
     print(json.dumps(report,indent=2,ensure_ascii=True))
 

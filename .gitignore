@@ -24,13 +24,12 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Optional reference material, excluded from the initial project upload.
-# Remove these rules if you want to share the photos and course materials.
-/reference_photos/
+# Course materials remain local; reference_photos/ can be versioned.
 /reference_materials/
 
 # Historical copy checksum list, not a manifest of the Git repository.
 /migration_manifest.sha256
 
-# Keep model assets (*.obj, *.mtl, *.glb), previews, and viewer/vendor/.
+# Keep model assets (*.obj, *.mtl, *.glb), exports/, previews/, reports/,
+# and viewer/vendor/ under version control.
 # OBJ files in this project are 3D meshes, not compiler outputs.

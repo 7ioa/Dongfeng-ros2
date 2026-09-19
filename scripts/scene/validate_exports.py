@@ -4,7 +4,9 @@ from collections import Counter
 import json, struct
 import numpy as np
 
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[2]
+EXPORT_DIR=ROOT/'exports/scene'
+REPORT_DIR=ROOT/'reports/scene'
 
 def read_obj(path):
     vertices=[];faces=[]
@@ -20,7 +22,7 @@ def read_obj(path):
 
 def validate_front_road():
     """Check the requested heights in saved meshes, including hidden terrain."""
-    cfg=json.loads((ROOT/'scene_config.json').read_text(encoding='utf-8'))
+    cfg=json.loads((ROOT/'config/scene/scene_config.json').read_text(encoding='utf-8'))
     mesh_dir=ROOT/'models/dongfeng_sandbox/meshes'
     v,f,_=read_obj(mesh_dir/'elevated_road_asphalt.obj')
     e=cfg['road_edge_inset_assumed'];radius=cfg['outer_road_radius']
@@ -57,7 +59,7 @@ def validate_front_road():
             'peak_location':'midpoint of each A/B quarter-circle'}
 
 def main():
-    raw=(ROOT/'dongfeng_sandbox.glb').read_bytes()
+    raw=(EXPORT_DIR/'dongfeng_sandbox.glb').read_bytes()
     magic,version,total=struct.unpack_from('<III',raw)
     assert magic==0x46546c67 and version==2 and total==len(raw)
     size,kind=struct.unpack_from('<II',raw,12);assert kind==0x4e4f534a
@@ -90,7 +92,7 @@ def main():
             assert f.max()<len(v) and len(v)==len(n)
             area2=np.linalg.norm(np.cross(v[f[:,1]]-v[f[:,0]],v[f[:,2]]-v[f[:,0]]),axis=1)
             zero_area+=int(np.sum(area2<1e-12));visual_count+=len(f);glb_vertices.append(v)
-    obj_v,obj_f,obj_zero=read_obj(ROOT/'dongfeng_sandbox.obj')
+    obj_v,obj_f,obj_zero=read_obj(EXPORT_DIR/'dongfeng_sandbox.obj')
     assert len(obj_f)==visual_count
     assert np.allclose(np.concatenate(glb_vertices),obj_v,atol=6e-7,rtol=0)
     assert zero_area==0 and obj_zero==0
@@ -117,7 +119,8 @@ def main():
             'obj_zero_area_triangles':obj_zero,'collision_meshes':collision_reports,
             'front_road_height_checks':validate_front_road(),
             'note':'Static export checks only. This is not a Gazebo physics or robot navigation runtime test.'}
-    (ROOT/'export_validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    REPORT_DIR.mkdir(parents=True,exist_ok=True)
+    (REPORT_DIR/'export_validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(report,ensure_ascii=True,indent=2))
 
 if __name__=='__main__':main()
