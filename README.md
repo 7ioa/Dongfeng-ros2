@@ -8,6 +8,7 @@
 
 | 子文件夹 | 大致内容 |
 |---|---|
+| `check_screenshots/` | 本地检查截图，已被 Git 忽略。以后生成的地图核对图、小车各视角截图统一放在这里。 |
 | `config/` | 地图配置。`scene/` 中保存沙盘尺寸、道路标线、B 区建筑和湖形等参数。 |
 | `docs/` | 项目文档。目前包含迁移交接说明，记录已完成的工作、使用约定和待验证事项。 |
 | `exports/` | 供 Blender 等软件导入的三维模型。`scene/` 保存地图的 OBJ、MTL、GLB 文件；`vehicle/` 保存小车的 GLB 文件。 |
@@ -42,6 +43,7 @@ dongfeng_sandbox/
 ├── launch_car.sh              # 地图与小车
 ├── keyboard_control.sh        # 键盘驾驶
 ├── launch_gazebo.sh            # 仅查看地图
+├── check_screenshots/          # 本地检查截图，Git 忽略
 ├── config/scene/              # 地图尺寸、标线、建筑与湖形参数
 ├── docs/                      # 迁移交接说明
 ├── exports/{scene,vehicle}/    # 导出模型，供 Blender 等软件使用
@@ -55,6 +57,8 @@ dongfeng_sandbox/
 ```
 
 `previews`、`exports` 和 `reports` 内的 `scene` 表示地图，`vehicle` 表示小车。小车生成与验证脚本仍在 `src/dongfeng_description/scripts/`。重新生成时，输出会写回对应子目录。预览截图和历史局部检查记录需单独更新。
+
+**检查截图存放约定：** 以后生成的道路高度、标线、建筑、湖形核对图，以及小车正面、侧面、背面、俯视等截图，统一保存到根目录的 `check_screenshots/`。该目录不提交到 Git；新克隆的项目需要截图时再创建。下文提到的旧检查截图已清理，后续生成时使用此目录。
 
 | 文件 / 文件夹 | 用途 |
 |---|---|

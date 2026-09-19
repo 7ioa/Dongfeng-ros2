@@ -6,6 +6,9 @@
 /install_control/
 /log_control/
 
+# Local screenshots generated for visual checks.
+/check_screenshots/
+
 # Python caches and local environments.
 __pycache__/
 *.py[cod]
