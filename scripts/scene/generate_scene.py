@@ -17,7 +17,11 @@ CFG = json.loads((CONFIG_DIR / 'scene_config.json').read_text(encoding='utf-8'))
 FRONT_MARKINGS = json.loads((CONFIG_DIR / 'front_markings.json').read_text(encoding='utf-8'))
 B_BUILDINGS = json.loads((CONFIG_DIR / 'b_buildings.json').read_text(encoding='utf-8'))
 B_LAKE = json.loads((CONFIG_DIR / 'b_lake.json').read_text(encoding='utf-8'))
+PARKING_LEFT = json.loads((CONFIG_DIR / 'parking_left.json').read_text(encoding='utf-8'))
+FACTORY_BUILDING = json.loads((CONFIG_DIR / 'factory_building.json').read_text(encoding='utf-8'))
+RIGHT_D = json.loads((CONFIG_DIR / 'right_d.json').read_text(encoding='utf-8'))
 W, L = CFG['interior_width'], CFG['interior_length']
+PARKING_Z = .002  # One horizontal yard surface, independent of the perimeter slopes.
 random.seed(CFG['seed'])
 TAU = math.tau
 PALETTE = {
@@ -209,9 +213,86 @@ def front_curve_height(fraction):
 
 def gz(x,y,d=.002):return ground_height(x,y)+d
 
-def yard_front_y(x):
+def original_yard_front_y(x):
     # Front boundary of the grey yard; notched in the middle to clear the round island.
     return 4.12+.47*math.exp(-((x-W/2)/.62)**2)
+
+def bezier_points(start,controls,count=25):
+    p0=np.asarray(start,float);p1,p2,p3=np.asarray(controls,float)
+    return [tuple((1-t)**3*p0+3*(1-t)**2*t*p1+3*(1-t)*t*t*p2+t**3*p3)
+            for t in np.linspace(0,1,count)]
+
+ORIGINAL_YARD_FRONT=[(x,original_yard_front_y(x)) for x in np.linspace(.39,W-.39,50)]
+YARD_JOIN_INDEX=PARKING_LEFT['yard_join_sample']
+join_x,join_y=ORIGINAL_YARD_FRONT[YARD_JOIN_INDEX]
+join_slope=-2*(join_x-W/2)/.62**2*(join_y-4.12)
+LEFT_YARD_FRONT=bezier_points(PARKING_LEFT['yard_corner_start'],PARKING_LEFT['yard_corner_controls'])
+LEFT_YARD_FRONT+=bezier_points(LEFT_YARD_FRONT[-1],[
+    PARKING_LEFT['yard_blend_control'],[join_x-.10,join_y-.10*join_slope],[join_x,join_y]])[1:]
+RIGHT_JOIN_INDEX=RIGHT_D['yard_join_sample']
+right_join_x,right_join_y=ORIGINAL_YARD_FRONT[RIGHT_JOIN_INDEX]
+right_join_slope=-2*(right_join_x-W/2)/.62**2*(right_join_y-4.12)
+right_controls=[list(p) for p in RIGHT_D['yard_front_controls']]
+right_controls[0]=[right_join_x+.10,right_join_y+.10*right_join_slope]
+RIGHT_YARD_FRONT=bezier_points((right_join_x,right_join_y),right_controls,33)
+RIGHT_YARD_FRONT+=bezier_points(RIGHT_YARD_FRONT[-1],RIGHT_D['yard_corner_controls'],33)[1:]
+
+def yard_front_y(x):
+    if x>=right_join_x:
+        return float(np.interp(x,[p[0] for p in RIGHT_YARD_FRONT],[p[1] for p in RIGHT_YARD_FRONT]))
+    if x>=join_x:return original_yard_front_y(x)
+    return float(np.interp(x,[p[0] for p in LEFT_YARD_FRONT],[p[1] for p in LEFT_YARD_FRONT]))
+
+def factory_north_curve():
+    # West bulge followed by an inward sweep on the round-island side.
+    # Each join has a horizontal tangent; the two ends meet vertical sides.
+    points=[tuple(PARKING_LEFT['factory_north_start'])]
+    for controls in PARKING_LEFT['factory_north_curves']:
+        points+=bezier_points(points[-1],controls,PARKING_LEFT['factory_north_samples_per_curve']+1)[1:]
+    return points
+
+def factory_north_boundary_y(x):
+    curve=factory_north_curve()
+    return float(np.interp(x,[p[0] for p in curve],[p[1] for p in curve]))
+
+def factory_north_outline(original):
+    # Keep both lower corners and replace only the northern boundary.
+    return original[:13]+list(reversed(factory_north_curve()))+original[39:]
+
+def factory_north_tree_point(x,y):
+    base=PARKING_LEFT['factory_north_start'][1]
+    if y<=base:return x,y
+    left=.37;right=W/2-CFG['central_road_width']/2
+    cx=(left+right)/2;rx=(right-left)/2-.045
+    old_ry=CFG['rear_island_end_y_assumed']-base-.045
+    angle=math.atan2((y-base)/old_ry,(x-cx)/rx)
+    cap=np.asarray(offset(factory_north_outline(P3_TREE_OUTLINE),.045)[13:-13])
+    distance=np.r_[0,np.cumsum(np.linalg.norm(np.diff(cap,axis=0),axis=1))]
+    target=angle/math.pi*distance[-1]
+    return tuple(float(np.interp(target,distance,cap[:,i])) for i in (0,1))
+
+def right_island_north_curve():
+    points=[tuple(RIGHT_D['island_north_start'])]
+    for controls in RIGHT_D['island_north_curves']:
+        points+=bezier_points(points[-1],controls,RIGHT_D['samples_per_curve']+1)[1:]
+    return points
+
+def right_island_outline(original):
+    return original[:13]+list(reversed(right_island_north_curve()))+original[39:]
+
+def right_island_boundary_y(x):
+    curve=right_island_north_curve()
+    return float(np.interp(x,[p[0] for p in curve],[p[1] for p in curve]))
+
+def right_island_tree_point(x,y):
+    base=RIGHT_D['island_north_start'][1]
+    if y<=base:return x,y
+    left=W/2+CFG['central_road_width']/2;right=W-.37
+    angle=math.atan2((y-base)/(CFG['rear_island_end_y_assumed']-base-.045),
+                     (x-(left+right)/2)/((right-left)/2-.045))
+    cap=np.asarray(offset(right_island_outline(P4_TREE_OUTLINE),.045)[13:-13])
+    distance=np.r_[0,np.cumsum(np.linalg.norm(np.diff(cap,axis=0),axis=1))]
+    return tuple(float(np.interp(angle/math.pi*distance[-1],distance,cap[:,i])) for i in (0,1))
 
 # One vehicle opening at each front corner of the grey yard. The rail dashes,
 # fence posts, white edge line, tree row, boundary lamps and the two barrier
@@ -222,15 +303,33 @@ YARD_GATE_LAMPS=(.90,W-.90)
 FEATURES=[]
 def feature(name,layer,x,y,z=0,**kw):FEATURES.append(dict(name=name,layer=layer,position=[x,y,z],**kw))
 
+def rear_curve_height(y,tangent_y,rise,straight_run):
+    """C2 height transition from the straight grade into the rear platform.
+
+    Use actual Y, including each road edge, rather than a shared angle-based
+    height: inner and outer radii must both inherit the same incoming grade.
+    The inner edge reaches the plateau by the end of the quarter-circle.
+    """
+    length=CFG['outer_road_radius']-CFG['one_way_width']
+    t=float(np.clip((y-tangent_y)/length,0,1))
+    change=CFG['rear_road_height']-rise
+    tangent=rise/straight_run*length
+    # Quintic Hermite: endpoint heights fixed, incoming derivative inherited,
+    # outgoing derivative zero, and zero second derivative at both endpoints.
+    return rise+change*(10*t**3-15*t**4+6*t**5)+tangent*(t-6*t**3+8*t**4-3*t**5)
+
 def perimeter():
     e=CFG['road_edge_inset_assumed'];R=CFG['outer_road_radius'];r=R-CFG['one_way_width']/2
     xl,xr=e+R,W-e-R;yb,yt=e+R,L-e-R
-    rise=CFG['rear_straight_rise_assumed']; sl=CFG['rear_straight_slope_length']
-    run=math.sqrt(sl*sl-rise*rise);zt=CFG['rear_road_height']
+    rise=CFG['rear_straight_rise_assumed'];zt=CFG['rear_road_height']
+    reference=CFG['rear_slope_start_reference']
+    gate={'left_parking_gate':PARKING_LEFT,'right_parking_gate':RIGHT_D}[reference]
+    start_y=gate['gate_base'][1];run=yt-start_y
+    assert yb<start_y<yt, 'The shared ramp start must lie on the rear straight.'
     points=[]
     def add(x,y,nx,ny,z,seg): points.append((x,y,nx,ny,z,seg))
     def side_z(y):
-        if y>yt-run:return rise*(y-(yt-run))/run
+        if y>start_y:return rise*(y-start_y)/run
         return 0.
     # CCW: bottom straight, B, right straight, C, rear straight, D, left straight, A
     for x in np.linspace(xl,xr,70,endpoint=False):add(x,yb-r,0,-1,0.0,'AB')
@@ -239,11 +338,15 @@ def perimeter():
     for t in front_fractions:
         a=-math.pi/2+t*math.pi/2
         add(xr+r*math.cos(a),yb+r*math.sin(a),math.cos(a),math.sin(a),front_curve_height(t),'B')
-    ys=sorted(set(np.linspace(yb,yt,180,endpoint=False).tolist()+[yt-run]))
+    ys=sorted(set(np.linspace(yb,yt,180,endpoint=False).tolist()+[start_y]))
     for y in ys:add(xr+r,y,1,0,side_z(y),'BC')
-    for a in np.linspace(0,math.pi/2,65,endpoint=False):add(xr+r*math.cos(a),yt+r*math.sin(a),math.cos(a),math.sin(a),rise+(zt-rise)*a/(math.pi/2),'C')
+    for a in np.linspace(0,math.pi/2,65,endpoint=False):
+        y=yt+r*math.sin(a)
+        add(xr+r*math.cos(a),y,math.cos(a),math.sin(a),rear_curve_height(y,yt,rise,run),'C')
     for x in np.linspace(xr,xl,70,endpoint=False):add(x,yt+r,0,1,zt,'CD')
-    for a in np.linspace(math.pi/2,math.pi,65,endpoint=False):add(xl+r*math.cos(a),yt+r*math.sin(a),math.cos(a),math.sin(a),zt-(zt-rise)*(a-math.pi/2)/(math.pi/2),'D')
+    for a in np.linspace(math.pi/2,math.pi,65,endpoint=False):
+        y=yt+r*math.sin(a)
+        add(xl+r*math.cos(a),y,math.cos(a),math.sin(a),rear_curve_height(y,yt,rise,run),'D')
     for y in [yt]+list(reversed(ys)):add(xl-r,y,-1,0,side_z(y),'DA')
     for t in front_fractions:
         a=math.pi+t*math.pi/2
@@ -251,7 +354,8 @@ def perimeter():
     clean=[]
     for p in points:
         if not clean or math.dist(p[:2],clean[-1][:2])>1e-9:clean.append(p)
-    return clean,dict(xl=xl,xr=xr,yb=yb,yt=yt,straight_slope_run=run,straight_slope_rise=rise)
+    return clean,dict(xl=xl,xr=xr,yb=yb,yt=yt,straight_slope_run=run,straight_slope_rise=rise,
+                      straight_slope_start_y=start_y,straight_slope_reference=reference)
 
 def build_ground():
     box(W/2,L/2,-.14,W,L,.11,'base','base','base')
@@ -268,12 +372,24 @@ def build_ground():
         box(cx,cy,0,sx,sy,.19,'boundary','acrylic','barriers')
 
 ROAD,ROAD_INFO=perimeter()
+
+def rear_straight_height(y):
+    """One shared grade for both roads and all attached entrance surfaces."""
+    return ROAD_INFO['straight_slope_rise']*float(np.clip(
+        (y-ROAD_INFO['straight_slope_start_y'])/ROAD_INFO['straight_slope_run'],0,1))
+
+def perimeter_surface_height(y,center_height,segment):
+    if segment in ('C','D'):
+        return rear_curve_height(y,ROAD_INFO['yt'],ROAD_INFO['straight_slope_rise'],ROAD_INFO['straight_slope_run'])
+    return center_height
+
 def build_road():
     half=CFG['one_way_width']/2;top=[];bottom=[]
     for x,y,nx,ny,z,seg in ROAD:
         # Physical and visible deck tops use the actual road datum. The base
         # terrain is 1 mm below it, while markings sit slightly above it.
-        top.extend([(x+half*nx,y+half*ny,z),(x-half*nx,y-half*ny,z)])
+        top.extend([(x+half*nx,y+half*ny,perimeter_surface_height(y+half*ny,z,seg)),
+                    (x-half*nx,y-half*ny,perimeter_surface_height(y-half*ny,z,seg))])
         bottom.extend([(x+half*nx,y+half*ny,-.014),(x-half*nx,y-half*ny,-.014)])
     faces=[]
     for i in range(len(ROAD)):
@@ -296,9 +412,13 @@ def build_road():
             # The foreground opens into the street grid; the existing island
             # kerbs provide its inner boundary instead of a line across it.
             if foreground and sign==-1:continue
+            if sign==-1 and ROAD[i][5]=='DA' and min(ROAD[i][1],ROAD[j][1])<PARKING_LEFT['inner_rail_end_y'] and max(ROAD[i][1],ROAD[j][1])>3.30:
+                continue
+            if sign==-1 and ROAD[i][5]=='BC' and min(ROAD[i][1],ROAD[j][1])<RIGHT_D['inner_rail_end_y'] and max(ROAD[i][1],ROAD[j][1])>3.40:
+                continue
             for index,delta in [(i,-.0025),(j,-.0025),(j,.0025),(i,.0025)]:
-                x,y,nx,ny,z,_=ROAD[index];d=sign*(half+delta)
-                q.append((x+nx*d,y+ny*d,z+.002))
+                x,y,nx,ny,z,seg=ROAD[index];d=sign*(half+delta)
+                q.append((x+nx*d,y+ny*d,perimeter_surface_height(y+ny*d,z,seg)+.002))
             if (foreground and sign==1) or (not foreground and sign==-1):q.reverse()
             m.quad(q)
     # Outer rail continuous; inner rail open where the street grid connects.
@@ -306,11 +426,20 @@ def build_road():
         distance=half+.007
         for i in range(0,len(ROAD),4):
             j=(i+4)%len(ROAD)
-            x,y,nx,ny,z,seg=ROAD[i];xx,yy,nxx,nyy,zz,_=ROAD[j]
+            x,y,nx,ny,z,seg=ROAD[i];xx,yy,nxx,nyy,zz,next_seg=ROAD[j]
             enabled=(sign==1) or seg in ('CD','C','D') or (seg in ('BC','DA') and y>3.72)
             if not enabled:continue
-            a=(x+sign*distance*nx,y+sign*distance*ny,z)
-            b=(xx+sign*distance*nxx,yy+sign*distance*nyy,zz)
+            ay=y+sign*distance*ny;by=yy+sign*distance*nyy
+            a=(x+sign*distance*nx,ay,perimeter_surface_height(ay,z,seg))
+            b=(xx+sign*distance*nxx,by,perimeter_surface_height(by,zz,next_seg))
+            if sign==-1 and seg in ('DA','BC'):
+                cutoff=(PARKING_LEFT if seg=='DA' else RIGHT_D)['inner_rail_end_y']
+                if max(a[1],b[1])<=cutoff:continue
+                if min(a[1],b[1])<cutoff:
+                    t=(cutoff-a[1])/(b[1]-a[1])
+                    clipped=tuple(np.asarray(a)+(np.asarray(b)-a)*t)
+                    if a[1]<cutoff:a=clipped
+                    else:b=clipped
             for h in [.031,CFG['guardrail_height_assumed']]:
                 beam((a[0],a[1],a[2]+h),(b[0],b[1],b[2]+h),.0045,'rails','steel',None,n=5)
             if i%12==0:beam(a,(a[0],a[1],a[2]+CFG['guardrail_height_assumed']),.004,'rails','steel','barriers',n=6)
@@ -318,6 +447,8 @@ def build_road():
             beam((a[0],a[1],a[2]+.065),(b[0],b[1],b[2]+.065),.0045,'rails','steel','barriers',n=5)
 
 ISLANDS=[]
+P3_TREE_OUTLINE=[]
+P4_TREE_OUTLINE=[]
 def add_island(name,pts):
     ISLANDS.append((name,pts));h=lambda x,y:gz(x,y,CFG['kerb_height_assumed'])
     poly(pts,h,'landscape','kerb','kerbs',thickness=CFG['kerb_height_assumed'])
@@ -330,27 +461,32 @@ def build_islands():
     p=rounded_rect(.37,.43,left,near,[.20,.14,.18,.44],15)
     add_island('P1 公园与水池',p)
     p2=[(W-x,y) for x,y in reversed(p)];add_island('P2 高楼群',p2)
-    add_island('P3 低层工业建筑',rounded_rect(.37,far,left,end,[.18,.23,.20,.16],12))
-    add_island('P4 特色建筑',rounded_rect(right,far,W-.37,end,[.16,.22,.24,.18],12))
+    P3_TREE_OUTLINE[:]=rounded_rect(.37,far,left,end,[.18,.23,.20,.16],12)
+    add_island('P3 低层工业建筑',factory_north_outline(P3_TREE_OUTLINE))
+    P4_TREE_OUTLINE[:]=rounded_rect(right,far,W-.37,end,[.16,.22,.24,.18],12)
+    add_island('P4 特色建筑',right_island_outline(P4_TREE_OUTLINE))
     cx,cy=CFG['round_island_centre_assumed'];r=CFG['round_island_radius_assumed']
     add_island('P5 圆形绿岛',ellipse(cx,cy,r,r,64))
     for name,pts in ISLANDS:
         feature(name,'landscape',sum(p[0] for p in pts)/len(pts),sum(p[1] for p in pts)/len(pts))
     # Grey courtyard, shaped to preserve the road around the central round island.
-    front=[(x,yard_front_y(x)) for x in np.linspace(.39,W-.39,50)]
+    front=LEFT_YARD_FRONT+ORIGINAL_YARD_FRONT[YARD_JOIN_INDEX+1:RIGHT_JOIN_INDEX]+RIGHT_YARD_FRONT
     upper=rounded_rect(.34,4.12,W-.34,L-.34,.5,20)
     # Explicit upper boundary follows the inner rear corner footprint.
     pts=front+[(W-.34,4.56)]+[(2.46+.5*math.cos(a),4.56+.5*math.sin(a)) for a in np.linspace(0,math.pi/2,20)]
-    pts +=[(.84,5.06)]+[(.84+.5*math.cos(a),4.56+.5*math.sin(a)) for a in np.linspace(math.pi/2,math.pi,20)]+[(.39,4.12)]
+    pts +=[(.84,5.06)]+[(.84+.5*math.cos(a),4.56+.5*math.sin(a)) for a in np.linspace(math.pi/2,math.pi,20)]
     # Duplicated corner entries are removed to keep triangulation clean.
     clean=[]
     for p in pts:
         if not clean or math.dist(p,clean[-1])>1e-7:clean.append(p)
     if math.dist(clean[0],clean[-1])<1e-7:clean.pop()
-    poly(clean,.002,'yard','grey_yard')
+    build_parking_yard(clean)
     # The white edge line stops at the two openings, like a dropped kerb.
-    YARD_OPENINGS[:]=[(front[0][0],front[9][0]),(front[40][0],front[49][0])]
-    ribbon(front[9:41],.008,.004,'markings','white')
+    YARD_OPENINGS[:]=[(LEFT_YARD_FRONT[0][0],PARKING_LEFT['booth_position'][0]+.04),
+                     (RIGHT_D['kerb_end_x'],RIGHT_YARD_FRONT[-1][0])]
+    ribbon(ORIGINAL_YARD_FRONT[YARD_JOIN_INDEX:RIGHT_JOIN_INDEX+1],.008,.004,'markings','white')
+    build_left_parking_edge()
+    build_right_parking_edge()
     # Small green marked rectangle seen in the reference courtyard.
     court=rounded_rect(1.42,4.65,1.88,4.98,.005,2)
     poly(court,.004,'yard','grass');ribbon(court,.006,.005,'markings','white',True)
@@ -358,12 +494,64 @@ def build_islands():
     # The fence is 17 short bays; dropping the first and last three leaves the
     # vehicle openings at both front corners. Each bay spans front[3i..3i+1].
     open_bays=(0,1,2,14,15,16)
-    for i,a in enumerate(front[:-1:3]):
-        if i in open_bays:continue
-        beam((*a,.03),(*front[3*i+1],.03),.003,'rails','steel',None,n=5)
-    for i,(x,y) in enumerate(front[::3]):
-        if i in open_bays:continue
+    for i,a in enumerate(ORIGINAL_YARD_FRONT[:-1:3]):
+        if i in open_bays or 3*i<YARD_JOIN_INDEX or 3*i+1>RIGHT_JOIN_INDEX:continue
+        beam((*a,.03),(*ORIGINAL_YARD_FRONT[3*i+1],.03),.003,'rails','steel',None,n=5)
+    for i,(x,y) in enumerate(ORIGINAL_YARD_FRONT[::3]):
+        if i in open_bays or 3*i<YARD_JOIN_INDEX or 3*i>RIGHT_JOIN_INDEX:continue
         beam((x,y,.002),(x,y,.052),.003,'rails','steel',None,n=5)
+
+def build_left_parking_edge():
+    """Rounded parking lip, dropped entrance and short dark garden fence."""
+    p=PARKING_LEFT;start=p['kerb_start_x']
+    path=[(start,yard_front_y(start))]+[point for point in LEFT_YARD_FRONT if point[0]>start]
+    # The entrance remains flush; only its white outline crosses the gate mouth.
+    entrance=[point for point in LEFT_YARD_FRONT if point[0]<start]+[path[0]]
+    ribbon(entrance,.006,.004,'markings','white')
+    for a,b in zip(path[:-1],path[1:]):
+        delta=np.asarray(b)-a;normal=np.array([-delta[1],delta[0]])/np.linalg.norm(delta)*p['kerb_width']/2
+        outline=[tuple(np.asarray(a)-normal),tuple(np.asarray(b)-normal),tuple(np.asarray(b)+normal),tuple(np.asarray(a)+normal)]
+        poly(outline,p['kerb_height'],'landscape','kerb','kerbs',thickness=p['kerb_height']-.002)
+    ribbon(path,.006,p['kerb_height']+.0015,'markings','white')
+    fence=[(x,yard_front_y(x)+.018) for x in np.linspace(start+.035,join_x,48)]
+    for height in [.025,.048]:
+        for a,b in zip(fence[:-1],fence[1:]):
+            beam((*a,height),(*b,height),.0018,'rails','black','barriers' if height==.048 else None,n=4)
+    for x,y in evenly_spaced(fence,.048,closed=False)+[fence[-1]]:
+        beam((x,y,.011),(x,y,.055),.002,'rails','black','barriers',n=4)
+    for x,y in evenly_spaced(fence,.014,closed=False):
+        beam((x,y,.016),(x,y,.046),.0008,'rails','black',n=4)
+
+def build_parking_yard(yard):
+    """Keep the entire yard level, with a matching closed collision slab."""
+    if signed_area(yard)<0:yard=list(reversed(yard))
+    top=[(x,y,PARKING_Z) for x,y in yard];faces=triangulate(yard)
+    bucket('yard','grey_yard').add(top,faces)
+    bottom=[(x,y,-.014) for x,y in yard]
+    collision=COLLISION['yard'];collision.add(top,faces)
+    collision.add(bottom,[(c,b,a) for a,b,c in faces])
+    for a in range(len(yard)):
+        b=(a+1)%len(yard)
+        collision.quad([bottom[a],bottom[b],top[b],top[a]])
+
+def build_right_parking_edge():
+    end=RIGHT_D['kerb_end_x']
+    path=[p for p in RIGHT_YARD_FRONT if p[0]<end]+[(end,yard_front_y(end))]
+    for a,b in zip(path[:-1],path[1:]):
+        d=np.asarray(b)-a;n=np.array([-d[1],d[0]])/np.linalg.norm(d)*.007
+        p=[tuple(np.asarray(a)-n),tuple(np.asarray(b)-n),tuple(np.asarray(b)+n),tuple(np.asarray(a)+n)]
+        poly(p,PARKING_Z+.009,'landscape','kerb','kerbs',thickness=.009)
+    ribbon(path,.006,PARKING_Z+.0105,'markings','white')
+    mouth=[path[-1]]+[p for p in RIGHT_YARD_FRONT if p[0]>end]
+    ribbon(mouth,.006,PARKING_Z+.002,'markings','white')
+    fence=[(x,yard_front_y(x)+.020) for x in np.linspace(right_join_x,end-.028,45)]
+    for h in [.025,.048]:
+        for a,b in zip(fence[:-1],fence[1:]):
+            beam((*a,PARKING_Z+h),(*b,PARKING_Z+h),.0018,'rails','black','barriers' if h==.048 else None,n=4)
+    for x,y in evenly_spaced(fence,.048,False)+[fence[-1]]:
+        beam((x,y,PARKING_Z+.009),(x,y,PARKING_Z+.053),.002,'rails','black','barriers',n=4)
+    for x,y in evenly_spaced(fence,.014,False):
+        beam((x,y,PARKING_Z+.014),(x,y,PARKING_Z+.044),.0008,'rails','black',n=4)
 
 def surface_rect(cx,cy,sx,sy,mat='white',zextra=.004):
     poly([(cx-sx/2,cy-sy/2),(cx+sx/2,cy-sy/2),(cx+sx/2,cy+sy/2),(cx-sx/2,cy+sy/2)],lambda x,y:gz(x,y,zextra),'markings',mat)
@@ -374,7 +562,7 @@ def arrow(x,y,angle=0,size=1):
     p=[(x+size*(c*a-s*b),y+size*(s*a+c*b)) for a,b in p]
     poly(p,lambda x,y:gz(x,y,.004),'markings','white')
 
-def foreground_arrow(x,y,kind='straight',angle=0):
+def foreground_arrow(x,y,kind='straight',angle=0,surface_height=None):
     """Photo-based single-polygon paint symbols; local +Y is forward."""
     shapes={
         'straight':[
@@ -397,9 +585,11 @@ def foreground_arrow(x,y,kind='straight',angle=0):
             (-.044,.026),(-.043,.062),(-.062,.014),(-.044,-.035),
             (-.047,-.009),(-.004,-.045)]
     }
+    shapes['bend_right']=[(-a,b) for a,b in shapes['bend_left']]
     c,s=math.cos(angle),math.sin(angle)
     pts=[(x+c*a-s*b,y+s*a+c*b) for a,b in shapes[kind]]
-    poly(pts,lambda x,y:gz(x,y,.004),'markings','white')
+    height=(lambda x,y:gz(x,y,.004)) if surface_height is None else (lambda x,y:surface_height(x,y)+.004)
+    poly(pts,height,'markings','white')
 
 
 def build_foreground_markings():
@@ -429,6 +619,47 @@ def build_foreground_markings():
     arrow(.19,1.5,math.pi,.9);arrow(W-.19,1.5,0,.9)
 
 
+def build_central_crossroad_markings():
+    """Two opposing lanes on each horizontal approach, matching the photo."""
+    cx=W/2;hw=CFG['central_road_width']/2
+    a=CFG['crossroad_near_y_assumed'];b=CFG['crossroad_far_y_assumed']
+    centre_y=(a+b)/2;lane_offset=(b-a)/4
+    outer_junction=CFG['road_edge_inset_assumed']+CFG['one_way_width']
+    # Stop before the existing side crosswalks (offset .035, depth .105).
+    crossing_edge=cx-hw-.035-.105/2
+    for x0,x1 in [(outer_junction,crossing_edge-.008),
+                  (W-crossing_edge+.008,W-outer_junction)]:
+        ribbon([(x0,centre_y),(x1,centre_y)],CFG['centre_line_width'],
+               lambda x,y:gz(x,y,.003),'markings','white')
+    # Near-side traffic heads east; far-side traffic heads west.
+    # Incoming lanes show the three intersection choices; outgoing lanes
+    # bend toward the one-way outer road at the next junction.
+    foreground_arrow(cx-hw-.30,centre_y-lane_offset,'threeway',-math.pi/2)
+    foreground_arrow(outer_junction+.32,centre_y+lane_offset,'bend_left',math.pi/2)
+    foreground_arrow(cx+hw+.30,centre_y+lane_offset,'threeway',math.pi/2)
+    foreground_arrow(W-outer_junction-.32,centre_y-lane_offset,'bend_left',-math.pi/2)
+
+def build_left_parking_markings():
+    # Photo landmarks: the stop line meets the booth and the factory island;
+    # the two arrows guide the outer lane and the link beside the round island.
+    bx,by=PARKING_LEFT['booth_position']
+    ribbon([(.55,factory_north_boundary_y(.55)),(bx,by-.037)],.008,
+           lambda x,y:gz(x,y,.004),'markings','white')
+    surface_rect(.2075,3.37,.335,.008)
+    height=lambda x,y:rear_straight_height(y)
+    foreground_arrow(.19,4.00,'straight_left',math.pi,surface_height=height)
+    arrow(1.11,3.76,-3*math.pi/4,.85)
+
+
+def build_right_d_markings():
+    # Arrow on the inner/left side; the outer/right line stays parallel to Y.
+    line_x=2.80
+    ribbon([(line_x,right_island_boundary_y(line_x)),(line_x,yard_front_y(line_x))],.008,
+           lambda x,y:gz(x,y,.004),'markings','white')
+    ribbon([(2.91,3.50),(W-.04,3.50)],.008,.004,'markings','white')
+    foreground_arrow(2.72,3.91,'bend_right')
+    arrow(2.17,3.79,-math.pi/4,.85)
+
 def build_markings():
     cx=W/2;hw=CFG['central_road_width']/2;a=CFG['crossroad_near_y_assumed'];b=CFG['crossroad_far_y_assumed']
     build_foreground_markings()
@@ -443,10 +674,13 @@ def build_markings():
     for y in [b]:
         for x0,x1 in [(.19,.39),(W-.39,W-.19)]:ribbon([(x0,y),(x1,y)],.005,lambda x,y:gz(x,y,.003),'markings','white')
     for y in [3.08]:
-        arrow(cx-.155,y,math.pi,.9);arrow(cx+.155,y,0,.9)
-    for y in [3.05]:arrow(.19,y,math.pi,.9);arrow(W-.19,y,0,.9)
-    for x in [.78,2.52]:
-        arrow(x,(a+b)/2,math.pi/2 if x<cx else -math.pi/2,.9)
+        foreground_arrow(cx-.155,y,'threeway',math.pi)
+        # The photo places the outgoing bent arrow farther up the right lane.
+        foreground_arrow(cx+.155,y+.28,'bend_right')
+    arrow(.19,3.05,math.pi,.9);arrow(W-.19,3.26,0,.9)
+    build_central_crossroad_markings()
+    build_left_parking_markings()
+    build_right_d_markings()
     for y in [b+.135]:surface_rect(cx,y,.62,.007)
     # Grade-following arrows on the elevated rear road.
     for x,y,theta,z in [(1.3,5.21,math.pi/2,.132),(2.05,5.21,math.pi/2,.132)]:
@@ -609,38 +843,130 @@ def build_b_district():
     box(2.724,1.60,base+.116,.071,.103,.003,'buildings','frame')
 
 
+def factory_facade(bounds,z,height):
+    """Horizontal storey bands dominate the real low-rise glass facades."""
+    x0,y0,x1,y1=bounds
+    points=[(x0,y0),(x1,y0),(x1,y1),(x0,y1)]
+    for a,b in zip(points,points[1:]+points[:1]):
+        a=np.asarray(a);b=np.asarray(b);direction=b-a;length=np.linalg.norm(direction)
+        normal=np.array([direction[1]/length,-direction[0]/length,0.])
+        def stroke(t0,h0,t1,h1,width):
+            p0=np.r_[a+direction*t0,z+h0];p1=np.r_[a+direction*t1,z+h1]
+            b_facade_stroke(p0,p1,normal,width,'frame',.001)
+        for t in np.linspace(0,1,max(2,round(length/.027))+1):
+            stroke(t,0,t,height,.00055)
+        for h in np.linspace(.008,height-.002,max(2,round(height/.033))+1):
+            stroke(0,h,1,h,.0035)
+
+
+def build_factory():
+    cfg=FACTORY_BUILDING;z=gz(cfg['wing_center_x'],3.16,.015)
+    sx,sy=cfg['wing_size'];h=cfg['wing_height'];cx=cfg['wing_center_x']
+    # Three separate wings: the two full-height recesses remain empty in both
+    # the visual model and the collision mesh, rather than painted on a slab.
+    for cy in cfg['wing_centers_y']:
+        box(cx,cy,z,sx,sy,h,'buildings','glass','buildings')
+        factory_facade((cx-sx/2,cy-sy/2,cx+sx/2,cy+sy/2),z,h)
+        roof_z=z+h
+        box(cx,cy,roof_z,sx+.012,sy+.012,.006,'buildings','roof')
+        for window in cfg['skylights']:
+            wx=window['center_x'];wsx,wsy=window['size'];wz=roof_z+.006
+            # Raised light rim with a lower coloured pane, including a small
+            # outboard window and a larger dark window on each wing.
+            box(wx,cy,wz,wsx,wsy,.008,'buildings','frame')
+            box(wx,cy,wz+.0081,wsx-.008,wsy-.008,.0005,'buildings',window['material'])
+            rim=[(wx-wsx/2,cy-wsy/2),(wx+wsx/2,cy-wsy/2),
+                 (wx+wsx/2,cy+wsy/2),(wx-wsx/2,cy+wsy/2)]
+            ribbon(offset(rim,.0015),.003,wz+.010,'buildings','white',True)
+    # Long narrow connecting gallery, raised over the row of red columns.
+    x0,y0,x1,y1=cfg['spine_bounds'];bottom=cfg['spine_bottom'];height=cfg['spine_height']
+    box((x0+x1)/2,(y0+y1)/2,z+bottom,x1-x0,y1-y0,height,'buildings','glass','buildings')
+    factory_facade((x0,y0,x1,y1),z+bottom,height)
+    roof_z=z+bottom+height
+    box((x0+x1)/2,(y0+y1)/2,roof_z,x1-x0+.010,y1-y0+.012,.004,'buildings','roof')
+    rim=[(x0-.005,y0-.006),(x1+.005,y0-.006),(x1+.005,y1+.006),(x0-.005,y1+.006)]
+    ribbon(offset(rim,.002),.0015,roof_z+.0045,'buildings','frame',True)
+    for cy in np.linspace(y0+.020,y1-.020,cfg['column_count']):
+        box(cfg['column_x'],cy,z,.009,.011,bottom,'buildings','red','buildings')
+    feature('B4 工业建筑','buildings',(x0+cx)/2,3.16,roof_z+.004,height=bottom+height)
+
+
 def build_buildings():
     build_b_district()
-    # Rear-left long low building, repeated rooftop vents and red columns.
-    building(.79,3.16,.43,.46,.19,'B4 工业建筑')
-    z=gz(.79,3.16,.015)
-    for y in np.linspace(2.96,3.37,8):box(1.016,y,z,.012,.017,.19,'buildings','red')
-    for y in [3.0,3.16,3.32]:
-        box(.78,y,z+.203,.30,.11,.022,'buildings','roof')
-        box(.69,y,z+.225,.075,.065,.009,'buildings','roof_dark')
-        box(.86,y,z+.225,.075,.065,.009,'buildings','roof_dark')
+    build_factory()
     box(1.15,3.12,gz(1.15,3.12,.015),.07,.08,.11,'buildings','white','buildings')
-    # Rear-right angular campus. Two volumes preserve the open central courtyard.
-    building(2.15,3.14,.12,.38,.17,'B5 白色校园西翼')
-    building(2.35,3.3,.30,.10,.17,'白色校园北翼')
-    for cx,cy,sx,sy in [(2.15,3.14,.15,.41),(2.35,3.3,.33,.13)]:
-        box(cx,cy,.193,sx,sy,.016,'buildings','white')
-    # Long triangular prism with horizontal facade bands.
-    x0,x1,y0,y1=2.51,2.66,2.95,3.42;z=.015
-    v=[(x0,y0,z),(x1,y0,z),(x1,y1,z),(x0,y1,z),(x0,y0,z+.06),(x1,y0,z+.06),(x1,y1,z+.30),(x0,y1,z+.30)]
+    build_right_d_buildings()
+
+def build_right_d_buildings():
+    cfg=RIGHT_D;z=.015;u=cfg['u_building'];p=[tuple(a) for a in u['outline']];h=u['height']
+    poly(p,z+h,'buildings','glass','buildings',thickness=h)
+    roof=offset(p,-.004);poly(roof,z+h+.004,'buildings','white',thickness=.004)
+    # Broad white facade bands and a real open courtyard, not two solid slabs.
+    for a,b in zip(p,p[1:]+p[:1]):
+        a=np.asarray(a);b=np.asarray(b);delta=b-a;length=np.linalg.norm(delta)
+        normal=np.r_[delta[1]/length,-delta[0]/length,0]
+        for hh in np.linspace(.012,h-.010,4):
+            b_facade_stroke(np.r_[a,z+hh],np.r_[b,z+hh],normal,.006,'white')
+        for t in np.linspace(0,1,max(2,round(length/.055))+1):
+            pt=a+delta*t;b_facade_stroke(np.r_[pt,z],np.r_[pt,z+h],normal,.003,'white')
+    canopy=offset(p,-.014);top=z+u['canopy_height']
+    for a,b in zip(canopy,canopy[1:]+canopy[:1]):
+        for hh in [top-.016,top]:beam((*a,hh),(*b,hh),.0012,'buildings','frame',n=4)
+        for x,y in evenly_spaced([a,b],.027,False):
+            beam((x,y,z+h+.005),(x,y,top),.0008,'buildings','frame',n=4)
+    # Fine open lattice above each roof wing; the U-shaped opening stays clear.
+    for y in np.arange(2.96,3.31,.027):
+        ranges=[(2.055,2.18),(2.28,2.405)] if y<3.105 else [(2.055,2.405)]
+        for a,b in ranges:beam((a,y,top),(b,y,top),.00065,'buildings','frame',n=4)
+    for x in np.arange(2.055,2.405,.027):
+        y0=3.105 if 2.175<x<2.285 else 2.96
+        beam((x,y0,top),(x,3.31,top),.00065,'buildings','frame',n=4)
+    for x,y in [(2.051,2.951),(2.409,2.951),(2.051,3.309),(2.409,3.309)]:
+        beam((x,y,z),(x,y,top),.0018,'buildings','white','buildings',n=4)
+    feature('D区 U形中庭楼','buildings',2.23,3.13,z+h,height=h)
+
+    wedge=cfg['wedge'];x0,y0,x1,y1=wedge['bounds'];lo,hi=wedge['low_height'],wedge['high_height']
+    height=lambda y:lo+(hi-lo)*(y-y0)/(y1-y0)
+    roof_z=lambda x,y:z+height(y)
+    rect=[(x0,y0),(x1,y0),(x1,y1),(x0,y1)]
+    v=[(x,y,z) for x,y in rect]+[(x,y,roof_z(x,y)) for x,y in rect]
     for q in [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]:
-        pts=[v[i] for i in q];bucket('buildings','glass_light').quad(pts);COLLISION['buildings'].quad(pts)
-    for yy in np.linspace(y0,y1,16):
-        h=.06+.24*(yy-y0)/(y1-y0)
-        beam((x0-.003,yy,z+h),(x1+.003,yy,z+h),.004,'buildings','white',n=4)
-    for zz in np.arange(.05,.29,.035):
-        yy0=y0+max(0,(zz-.06)/.24)*(y1-y0)
-        for xx in [x0-.002,x1+.002]:beam((xx,yy0,z+zz),(xx,y1,z+zz),.002,'buildings','white',n=4)
-    # Small red arched shed, visually recognizable in all side references.
-    cx,cy=2.79,3.36;points=[(cx-.065,cy-.07),(cx+.065,cy-.07),(cx+.065,cy+.07),(cx-.065,cy+.07)]
-    poly(points,.06,'buildings','red','buildings',thickness=.045)
-    for a,b in zip(np.linspace(0,math.pi,16)[:-1],np.linspace(0,math.pi,16)[1:]):
-        bucket('buildings','red').quad([(cx+.065*math.cos(a),cy-.07,.06+.055*math.sin(a)),(cx+.065*math.cos(a),cy+.07,.06+.055*math.sin(a)),(cx+.065*math.cos(b),cy+.07,.06+.055*math.sin(b)),(cx+.065*math.cos(b),cy-.07,.06+.055*math.sin(b))])
+        points=[v[i] for i in q];bucket('buildings','glass').quad(points);COLLISION['buildings'].quad(points)
+    # Horizontal white bands stop at the sloped roof; sparse vertical joints.
+    for zz in np.arange(.025,hi,.028):
+        yy=y0+max(0.,(zz-lo)/(hi-lo))*(y1-y0)
+        for x in [x0-.001,x1+.001]:
+            b_facade_stroke(np.array([x,yy,z+zz]),np.array([x,y1,z+zz]),[-1 if x<x0 else 1,0,0],.0045,'white')
+        for y in [y0,y1]:
+            if zz<height(y):b_facade_stroke(np.array([x0,y,z+zz]),np.array([x1,y,z+zz]),[0,-1 if y==y0 else 1,0],.0035,'white')
+    for y in np.arange(y0,y1+.0001,.035):
+        for x in [x0-.001,x1+.001]:
+            beam((x,y,z),(x,y,roof_z(x,y)),.00065,'buildings','frame',n=4)
+    for x in np.linspace(x0,x1,8):
+        beam((x,y1+.001,z),(x,y1+.001,z+hi),.0008,'buildings','frame',n=4)
+    poly(offset(rect,-.004),lambda x,y:roof_z(x,y)+.003,'buildings','roof',thickness=.003)
+    roof_window=[(x0+.035,y0+.048),(x1-.035,y0+.048),(x1-.035,y1-.048),(x0+.035,y1-.048)]
+    poly(roof_window,lambda x,y:roof_z(x,y)+.0038,'buildings','roof_dark')
+    ribbon(roof_window,.0025,lambda x,y:roof_z(x,y)+.0045,'buildings','white',True)
+    for y in np.linspace(y0+.048,y1-.048,8):
+        beam((x0+.035,y,roof_z(x0,y)+.0045),(x1-.035,y,roof_z(x0,y)+.0045),.0008,'buildings','frame',n=4)
+    feature('D区斜顶楼与长条屋顶窗','buildings',(x0+x1)/2,(y0+y1)/2,z+hi,height=hi)
+
+    shed=cfg['shed'];cx,cy=shed['center'];sx,sy=shed['size'];wall=shed['wall_height'];arch=shed['arch_height']
+    # Closed barrel-roof shed, including its dark end walls and curved collision.
+    section=[(cx-sx/2,z),(cx+sx/2,z)]+[(cx+sx/2*math.cos(t),z+wall+arch*math.sin(t)) for t in np.linspace(0,math.pi,25)]
+    indices=triangulate(section);n=len(section)
+    for y,reverse in [(cy-sy/2,False),(cy+sy/2,True)]:
+        vv=[(x,y,zz) for x,zz in section];ff=[(c,b,a) if reverse else (a,b,c) for a,b,c in indices]
+        bucket('buildings','glass').add(vv,ff);COLLISION['buildings'].add(vv,ff)
+    for a,b in zip(section,section[1:]+section[:1]):
+        q=[(a[0],cy-sy/2,a[1]),(a[0],cy+sy/2,a[1]),(b[0],cy+sy/2,b[1]),(b[0],cy-sy/2,b[1])]
+        bucket('buildings','red').quad(q);COLLISION['buildings'].quad(q)
+    # Small white utility box and short pale service path shown beside the slope.
+    bx,by=cfg['utility_cabinet'];box(bx,by,z,.082,.085,.068,'buildings','white','buildings')
+    box(bx,by,z+.068,.087,.09,.005,'buildings','roof')
+    box(bx,by-.043,z+.012,.057,.001,.043,'buildings','glass_light')
+    ribbon([(2.20,2.925),(2.48,2.925),(bx,by)],.012,.016,'landscape','paving')
 
 def inside_polygon(x,y,p):
     inside=False
@@ -650,8 +976,8 @@ def inside_polygon(x,y,p):
     return inside
 
 TREE_POS=[]
-def tree(x,y,h=.14,wide=1,emit=True):
-    z=gz(x,y,.015);r=h*.21*wide
+def tree(x,y,h=.14,wide=1,emit=True,base_height=None):
+    z=gz(x,y,.015) if base_height is None else base_height+.015;r=h*.21*wide
     # Leaf materials are drawn even for an omitted tree, so clearing a gateway
     # never shifts the colours of the trees that follow it.
     leaf=[random.randrange(4) for _ in range(4)]
@@ -673,7 +999,11 @@ def evenly_spaced(p,spacing,closed=True):
 
 def build_trees():
     for name,p in ISLANDS[:4]:
-        for x,y in evenly_spaced(offset(p,.045),.115):tree(x,y,random.uniform(.095,.135),.95)
+        source=P3_TREE_OUTLINE if name=='P3 低层工业建筑' else P4_TREE_OUTLINE if name=='P4 特色建筑' else p
+        for x,y in evenly_spaced(offset(source,.045),.115):
+            if name=='P3 低层工业建筑':x,y=factory_north_tree_point(x,y)
+            if name=='P4 特色建筑':x,y=right_island_tree_point(x,y)
+            tree(x,y,random.uniform(.095,.135),.95)
     p=ISLANDS[0][1]
     for _ in range(250):
         x=random.uniform(.45,1.24);y=random.uniform(.62,1.96)
@@ -691,10 +1021,11 @@ def build_trees():
         y=yard_front_y(x)
         # Keep the two gate mouths and the boundary lamps clear.
         keep=not any(a<=x<=b for a,b in YARD_OPENINGS) and all(abs(x-l)>.035 for l in YARD_GATE_LAMPS)
-        tree(x,y-.016,.095,.8,emit=keep)
+        ty=y+(.036 if x<join_x or x>right_join_x else -.016)
+        tree(x,ty,.095,.8,emit=keep,base_height=PARKING_Z if x>right_join_x else None)
 
-def lamp(x,y,angle=0,h=.43):
-    z=gz(x,y,.012);dx,dy=math.cos(angle),math.sin(angle)
+def lamp(x,y,angle=0,h=.43,base_height=None):
+    z=gz(x,y,.012) if base_height is None else base_height+.012;dx,dy=math.cos(angle),math.sin(angle)
     box(x,y,z,.035,.035,.012,'street_furniture','steel','furniture')
     pts=[]
     for t in np.linspace(0,1,12):
@@ -751,20 +1082,57 @@ def yard_gate(post_x,far_x,inward):
         beam((post_x+(far_x-post_x)*(t-.04),py+(fy-py)*(t-.04),boom),
              (post_x+(far_x-post_x)*(t+.04),py+(fy-py)*(t+.04),boom),.0062,'street_furniture','red',None,n=6)
 
+def left_parking_gate():
+    """Raised single boom and a separate glazed booth at the other jamb."""
+    p=PARKING_LEFT;x,y=p['gate_base'];bx,by=p['booth_position']
+    box(x,y,.002,.050,.063,.009,'street_furniture','yellow','furniture')
+    box(x,y,.011,.034,.045,.090,'street_furniture','yellow','furniture')
+    box(x,y,.101,.036,.047,.005,'street_furniture','roof')
+    pivot=np.asarray([x+.010,y,.096]);direction=np.asarray([bx-x,by-y]);direction/=np.linalg.norm(direction)
+    angle=math.radians(p['gate_open_angle_deg'])
+    delta=p['gate_arm_length']*np.asarray([direction[0]*math.cos(angle),direction[1]*math.cos(angle),math.sin(angle)])
+    beam(pivot,pivot+delta,.0035,'street_furniture','white','furniture',n=6)
+    for t in [.13,.34,.55,.76,.94]:
+        beam(pivot+delta*(t-.035),pivot+delta*(t+.035),.0038,'street_furniture','red',n=6)
+    box(bx,by,.002,.071,.066,.012,'street_furniture','white','furniture')
+    box(bx,by,.014,.062,.057,.075,'street_furniture','white','furniture')
+    box(bx,by,.089,.077,.072,.009,'street_furniture','roof')
+    # Dark glazing makes the booth distinct from a plain control cabinet.
+    for sy in [-1,1]:box(bx,by+sy*.029,.046,.046,.0015,.029,'street_furniture','glass')
+    for sx in [-1,1]:box(bx+sx*.0315,by,.046,.0015,.042,.029,'street_furniture','glass')
+
+def right_parking_gate():
+    p=RIGHT_D;x,y=p['gate_base'];bx,by=p['booth_position']
+    z=PARKING_Z
+    box(x,y,z,.050,.063,.009,'street_furniture','yellow','furniture')
+    box(x,y,z+.009,.034,.045,.090,'street_furniture','yellow','furniture')
+    box(x,y,z+.099,.036,.047,.005,'street_furniture','roof')
+    pivot=np.asarray([x+.010,y,z+.094]);direction=np.asarray([bx-x,by-y]);direction/=np.linalg.norm(direction)
+    angle=math.radians(p['gate_open_angle_deg'])
+    delta=p['gate_arm_length']*np.asarray([direction[0]*math.cos(angle),direction[1]*math.cos(angle),math.sin(angle)])
+    beam(pivot,pivot+delta,.0035,'street_furniture','white','furniture',n=6)
+    for t in [.13,.34,.55,.76,.94]:
+        beam(pivot+delta*(t-.035),pivot+delta*(t+.035),.0038,'street_furniture','red',n=6)
+    # The booth's plinth rests on the same plane as the entire parking yard.
+    top=PARKING_Z+.004
+    box(bx,by,PARKING_Z,.072,.068,.004,'street_furniture','white','furniture')
+    box(bx,by,top,.062,.057,.075,'street_furniture','white','furniture')
+    box(bx,by,top+.075,.077,.072,.009,'street_furniture','roof')
+    for sy in [-1,1]:box(bx,by+sy*.029,top+.032,.046,.0015,.029,'street_furniture','glass')
+    for sx in [-1,1]:box(bx+sx*.0315,by,top+.032,.0015,.042,.029,'street_furniture','glass')
+
 def build_furniture():
-    for x,y,a in [(.35,.9,0),(.35,2.0,0),(.35,3.15,0),(1.28,.78,math.pi),(1.28,1.90,math.pi),(1.29,3.38,math.pi),
-                    (W-.35,.9,math.pi),(W-.35,2.0,math.pi),(W-.35,3.15,math.pi),(2.02,.8,0),(2.02,1.94,0),(2.01,3.38,0),
+    for x,y,a in [(.35,.9,0),(.35,2.0,0),(.35,3.15,0),(1.28,.78,math.pi),(1.28,1.90,math.pi),(*PARKING_LEFT['factory_north_lamp_position'],math.pi),
+                    (W-.35,.9,math.pi),(W-.35,2.0,math.pi),(W-.35,3.15,math.pi),(2.02,.8,0),(2.02,1.94,0),*RIGHT_D['island_lamps'],
                     (YARD_GATE_LAMPS[0],yard_front_y(YARD_GATE_LAMPS[0]),0),
                     (YARD_GATE_LAMPS[1],yard_front_y(YARD_GATE_LAMPS[1]),math.pi),
-                    (1.65,4.5,math.pi/2)]:lamp(x,y,a)
+                    (1.65,4.5,math.pi/2)]:lamp(x,y,a,base_height=PARKING_Z if x>right_join_x and y>3.8 else None)
     for x,y,a in [(.41,2.05,0),(1.26,2.06,math.pi/2),(2.04,2.77,-math.pi/2),(2.89,2.77,math.pi),
-                  (.42,2.77,0),(2.88,2.05,math.pi),(.37,3.55,0),(2.93,3.55,math.pi)]:signal(x,y,a)
+                  (.42,2.77,0),(2.88,2.05,math.pi),(.075,3.37,0),(3.225,3.50,math.pi)]:signal(x,y,a)
     for x in [1.0,2.3]:gantry(x)
-    # One barrier gate closing each vehicle opening of the grey yard: main post
-    # on the yard corner, boom spanning the opening to the far fence bay.
-    for post_x,far_x,inward in [(YARD_OPENINGS[0][0],YARD_OPENINGS[0][1],1),
-                                (YARD_OPENINGS[1][1],YARD_OPENINGS[1][0],-1)]:
-        yard_gate(post_x,far_x,inward)
+    # Both entrances use their independently observed gate and booth positions.
+    left_parking_gate()
+    right_parking_gate()
 
 def write_obj(path,mesh,material=None):
     v,f,n=mesh.arrays()
@@ -851,16 +1219,25 @@ def validate(arrays):
     assert all(abs(h-CFG['front_curve_height'])<1e-10 for h in checks['front_curve_peaks_m'].values())
     checks['rear_height_m']=CFG['rear_road_height']
     checks['rear_straight_slope_length_m']=math.hypot(ROAD_INFO['straight_slope_run'],ROAD_INFO['straight_slope_rise'])
+    checks['rear_straight_slope_start_y_m']=ROAD_INFO['straight_slope_start_y']
+    checks['rear_straight_slope_reference']=ROAD_INFO['straight_slope_reference']
+    checks['rear_straight_horizontal_run_m']=ROAD_INFO['straight_slope_run']
+    checks['rear_straight_grade_degrees']=math.degrees(math.atan2(ROAD_INFO['straight_slope_rise'],ROAD_INFO['straight_slope_run']))
+    checks['rear_curve_profile']='Quintic height over Y: incoming straight grade matched at both road edges, easing to a level rear platform.'
     checks['maximum_adjacent_road_height_step_m']=max(abs(ROAD[(i+1)%len(ROAD)][4]-p[4]) for i,p in enumerate(ROAD))
     checks['closing_segment_length_m']=math.dist(ROAD[0][:2],ROAD[-1][:2])
     checks['closing_segment_note']='The final section is connected to the first by mesh faces; this is a segment length, not a gap.'
     checks['road_cross_sections']=len(ROAD)
     checks['visual_mesh_groups']=len(arrays);checks['visual_triangles']=sum(len(f) for v,f,n in arrays.values());checks['trees']=len(TREE_POS)
     checks['collision_triangles']=sum(len(m.f) for m in COLLISION.values())
-    checks['gazebo_runtime_test']='Not run: Gazebo Harmonic is not installed on the Windows build host.'
+    checks['gazebo_runtime_test']='Not run: this generator performs static geometry checks only.'
     assert checks['finite_geometry'] and checks['valid_triangle_indices']
     assert abs(min(widths)-.30)<1e-8 and abs(max(widths)-.30)<1e-8
-    assert abs(checks['rear_straight_slope_length_m']-.89)<1e-8
+    for side in ['BC','DA']:
+        points=[p for p in ROAD if p[5]==side]
+        assert any(abs(p[1]-ROAD_INFO['straight_slope_start_y'])<1e-10 and p[4]==0 for p in points)
+        assert all(p[4]==0 for p in points if p[1]<=ROAD_INFO['straight_slope_start_y'])
+        assert all(abs(p[4]-rear_straight_height(p[1]))<1e-10 for p in points)
     refs=[]
     for path in [ROOT/'worlds'/'dongfeng.sdf',ROOT/'models'/'dongfeng_sandbox'/'model.sdf']:
         root=ET.parse(path).getroot()

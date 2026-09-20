@@ -1,0 +1,21 @@
+{
+  "scope": "Only the south-facing arrow on the north approach to the central junction: straight arrow replaced with a three-way arrow.",
+  "unchanged_files_from_pre_change_snapshot": 131,
+  "unchanged_visual_mesh_groups": 33,
+  "unchanged_marking_triangles": 5530,
+  "removed_marking_triangles": 5,
+  "added_marking_triangles": 19,
+  "changed_geometry_min_m": [
+    1.433,
+    2.935,
+    0.004
+  ],
+  "changed_geometry_max_m": [
+    1.557,
+    3.19,
+    0.004
+  ],
+  "paint_faces_upward": true,
+  "opposite_lane_arrow_crosswalks_lane_lines_previous_side_approach_edit_and_collision_meshes_unchanged": true,
+  "note": "Static geometry and export validation. Check images are drawn from actual exported meshes; Gazebo runtime was not tested."
+}

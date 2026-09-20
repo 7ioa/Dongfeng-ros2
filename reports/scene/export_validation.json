@@ -1,12 +1,12 @@
 {
   "glb_header_accessors_and_bounds": "passed",
   "glb_and_obj_same_geometry": "passed",
-  "visual_triangles": 113210,
+  "visual_triangles": 119800,
   "glb_zero_area_triangles": 0,
   "obj_zero_area_triangles": 0,
   "collision_meshes": {
     "collision_barriers": {
-      "triangles": 6012,
+      "triangles": 7164,
       "zero_area_triangles": 0
     },
     "collision_base": {
@@ -14,15 +14,15 @@
       "zero_area_triangles": 0
     },
     "collision_buildings": {
-      "triangles": 252,
+      "triangles": 552,
       "zero_area_triangles": 0
     },
     "collision_furniture": {
-      "triangles": 824,
+      "triangles": 944,
       "zero_area_triangles": 0
     },
     "collision_kerbs": {
-      "triangles": 1164,
+      "triangles": 2428,
       "zero_area_triangles": 0
     },
     "collision_road_deck": {
@@ -37,8 +37,15 @@
       "zero_area_triangles": 0
     },
     "collision_trees": {
-      "triangles": 4120,
+      "triangles": 4200,
       "zero_area_triangles": 0
+    },
+    "collision_yard": {
+      "triangles": 684,
+      "zero_area_triangles": 0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0
     }
   },
   "front_road_height_checks": {
@@ -54,6 +61,52 @@
     "front_terrain_elevation_m": -0.001,
     "visual_and_collision_deck_match": true,
     "peak_location": "midpoint of each A/B quarter-circle"
+  },
+  "rear_road_height_checks": {
+    "reference": "left_parking_gate",
+    "shared_start_y_m": 4.29,
+    "flat_before_start": true,
+    "left_right_profiles_identical": true,
+    "straight_horizontal_run_m": 0.27000000000000046,
+    "straight_slope_length_m": 0.2777138815399768,
+    "straight_rise_m": 0.065,
+    "final_rear_height_m": 0.13,
+    "arc_edge_tangency_checks": {
+      "left": {
+        "inner": {
+          "incoming_grade_angle_error_deg": 0.003773962202408273,
+          "outgoing_grade": 0.0
+        },
+        "outer": {
+          "incoming_grade_angle_error_deg": 0.011486693264369003,
+          "outgoing_grade": 0.0
+        }
+      },
+      "right": {
+        "inner": {
+          "incoming_grade_angle_error_deg": 0.003773962202408273,
+          "outgoing_grade": 0.0
+        },
+        "outer": {
+          "incoming_grade_angle_error_deg": 0.011486693264369003,
+          "outgoing_grade": 0.0
+        }
+      }
+    },
+    "maximum_straight_to_arc_face_angle_deg": 0.010540872292726919,
+    "arcs_monotone_without_overshoot": true,
+    "arcs_end_level": true
+  },
+  "parking_yard_checks": {
+    "surface_height_min_max_m": [
+      0.002,
+      0.002
+    ],
+    "height_variation_m": 0.0,
+    "covered_area_m2": 1.943529588836995,
+    "all_surface_normals_vertical": true,
+    "visual_and_collision_top_triangles_identical": true,
+    "obsolete_graded_entrance_removed_from_model": true
   },
   "note": "Static export checks only. This is not a Gazebo physics or robot navigation runtime test."
 }

@@ -1,0 +1,135 @@
+{
+  "scope": "Factory building, asymmetric northern curb and adjacent tree row, one northern lamp, and curb-connected stop-line endpoint only.",
+  "curve": "Three tangent-connected cubic Beziers; west/left bulge and east/right inward sweep when north is up.",
+  "curve_west_peak_y_m": 3.66,
+  "curve_east_inset_y_m": 3.42,
+  "maximum_segment_direction_change_deg": 5.487360011979532,
+  "factory_wings": 3,
+  "factory_roof_windows": 6,
+  "factory_red_columns": 9,
+  "factory_collision_solids_closed": true,
+  "two_recesses_and_gallery_undercroft_open_in_collision": true,
+  "buildings_and_lamp_footprints_inside": true,
+  "tree_count": 208,
+  "other_buildings_parking_gate_booth_rails_and_road_deck_unchanged": true,
+  "protected_file_count": 114,
+  "unchanged_mesh_count": 21,
+  "changed_mesh_triangles": {
+    "buildings_frame.obj": {
+      "removed": 936,
+      "added": 548,
+      "preserved": 4820
+    },
+    "buildings_glass.obj": {
+      "removed": 12,
+      "added": 48,
+      "preserved": 204
+    },
+    "buildings_glass_light.obj": {
+      "removed": 0,
+      "added": 36,
+      "preserved": 60
+    },
+    "buildings_red.obj": {
+      "removed": 96,
+      "added": 108,
+      "preserved": 42
+    },
+    "buildings_roof.obj": {
+      "removed": 48,
+      "added": 48,
+      "preserved": 192
+    },
+    "buildings_roof_dark.obj": {
+      "removed": 84,
+      "added": 36,
+      "preserved": 24
+    },
+    "buildings_white.obj": {
+      "removed": 0,
+      "added": 48,
+      "preserved": 1284
+    },
+    "collision_buildings.obj": {
+      "removed": 12,
+      "added": 156,
+      "preserved": 240
+    },
+    "collision_furniture.obj": {
+      "removed": 32,
+      "added": 32,
+      "preserved": 836
+    },
+    "collision_kerbs.obj": {
+      "removed": 264,
+      "added": 392,
+      "preserved": 1368
+    },
+    "collision_trees.obj": {
+      "removed": 220,
+      "added": 220,
+      "preserved": 3940
+    },
+    "landscape_grass.obj": {
+      "removed": 66,
+      "added": 98,
+      "preserved": 259
+    },
+    "landscape_kerb.obj": {
+      "removed": 264,
+      "added": 392,
+      "preserved": 1368
+    },
+    "markings_white.obj": {
+      "removed": 338,
+      "added": 322,
+      "preserved": 5324
+    },
+    "street_furniture_red.obj": {
+      "removed": 12,
+      "added": 12,
+      "preserved": 368
+    },
+    "street_furniture_steel.obj": {
+      "removed": 12,
+      "added": 12,
+      "preserved": 2496
+    },
+    "street_furniture_white.obj": {
+      "removed": 304,
+      "added": 304,
+      "preserved": 4400
+    },
+    "street_furniture_yellow.obj": {
+      "removed": 20,
+      "added": 20,
+      "preserved": 340
+    },
+    "vegetation_bark.obj": {
+      "removed": 220,
+      "added": 220,
+      "preserved": 3940
+    },
+    "vegetation_leaf0.obj": {
+      "removed": 714,
+      "added": 714,
+      "preserved": 8694
+    },
+    "vegetation_leaf1.obj": {
+      "removed": 420,
+      "added": 420,
+      "preserved": 8232
+    },
+    "vegetation_leaf2.obj": {
+      "removed": 252,
+      "added": 252,
+      "preserved": 7938
+    },
+    "vegetation_leaf3.obj": {
+      "removed": 462,
+      "added": 462,
+      "preserved": 8232
+    }
+  },
+  "note": "Photo-estimated geometry, not newly measured dimensions. Static export checks; no Gazebo runtime test."
+}
