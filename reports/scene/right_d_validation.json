@@ -1,0 +1,190 @@
+{
+  "scope": "Right D district (P4 island), adjacent right parking entrance, local road connection and furniture. Previously completed left side preserved.",
+  "photo_estimated": true,
+  "tree_count": 210,
+  "protected_file_count": 107,
+  "unchanged_mesh_count": 12,
+  "other_regions_mesh_triangles_preserved": true,
+  "western_yard_surface_preserved": true,
+  "main_perimeter_deck_unchanged": true,
+  "entrance_collision_closed_and_oriented": true,
+  "entrance_visual_collision_tops_identical": true,
+  "maximum_open_entrance_seam_height_error_m": 5.123506591903082e-07,
+  "gate_body_projected_clear_width_m": 0.21808312260402857,
+  "u_courtyard_open_in_collision": true,
+  "right_building_collision_closed_and_oriented": true,
+  "roof_and_lamp_footprints_inside_island": true,
+  "changed_mesh_triangles": {
+    "buildings_frame.obj": {
+      "removed": 1128,
+      "added": 1968,
+      "preserved": 4240
+    },
+    "buildings_glass.obj": {
+      "removed": 24,
+      "added": 90,
+      "preserved": 228
+    },
+    "buildings_glass_light.obj": {
+      "removed": 12,
+      "added": 12,
+      "preserved": 84
+    },
+    "buildings_red.obj": {
+      "removed": 42,
+      "added": 54,
+      "preserved": 108
+    },
+    "buildings_roof.obj": {
+      "removed": 24,
+      "added": 24,
+      "preserved": 216
+    },
+    "buildings_roof_dark.obj": {
+      "removed": 24,
+      "added": 2,
+      "preserved": 36
+    },
+    "buildings_white.obj": {
+      "removed": 384,
+      "added": 392,
+      "preserved": 948
+    },
+    "collision_barriers.obj": {
+      "removed": 149,
+      "added": 709,
+      "preserved": 6455
+    },
+    "collision_buildings.obj": {
+      "removed": 48,
+      "added": 204,
+      "preserved": 348
+    },
+    "collision_furniture.obj": {
+      "removed": 116,
+      "added": 192,
+      "preserved": 752
+    },
+    "collision_kerbs.obj": {
+      "removed": 108,
+      "added": 776,
+      "preserved": 1652
+    },
+    "collision_right_entrance.obj": {
+      "removed": 0,
+      "added": 7304,
+      "preserved": 0
+    },
+    "collision_trees.obj": {
+      "removed": 240,
+      "added": 280,
+      "preserved": 3920
+    },
+    "landscape_grass.obj": {
+      "removed": 27,
+      "added": 98,
+      "preserved": 330
+    },
+    "landscape_kerb.obj": {
+      "removed": 108,
+      "added": 776,
+      "preserved": 1652
+    },
+    "landscape_paving.obj": {
+      "removed": 0,
+      "added": 4,
+      "preserved": 188
+    },
+    "markings_white.obj": {
+      "removed": 271,
+      "added": 445,
+      "preserved": 5375
+    },
+    "rails_black.obj": {
+      "removed": 0,
+      "added": 1764,
+      "preserved": 1872
+    },
+    "rails_steel.obj": {
+      "removed": 431,
+      "added": 39,
+      "preserved": 13749
+    },
+    "right_entrance_asphalt.obj": {
+      "removed": 0,
+      "added": 3472,
+      "preserved": 0
+    },
+    "street_furniture_black.obj": {
+      "removed": 12,
+      "added": 12,
+      "preserved": 84
+    },
+    "street_furniture_glass.obj": {
+      "removed": 0,
+      "added": 48,
+      "preserved": 48
+    },
+    "street_furniture_light_green.obj": {
+      "removed": 48,
+      "added": 48,
+      "preserved": 336
+    },
+    "street_furniture_red.obj": {
+      "removed": 124,
+      "added": 136,
+      "preserved": 256
+    },
+    "street_furniture_roof.obj": {
+      "removed": 12,
+      "added": 24,
+      "preserved": 24
+    },
+    "street_furniture_steel.obj": {
+      "removed": 176,
+      "added": 188,
+      "preserved": 2332
+    },
+    "street_furniture_white.obj": {
+      "removed": 660,
+      "added": 956,
+      "preserved": 4044
+    },
+    "street_furniture_yellow.obj": {
+      "removed": 52,
+      "added": 84,
+      "preserved": 308
+    },
+    "vegetation_bark.obj": {
+      "removed": 240,
+      "added": 280,
+      "preserved": 3920
+    },
+    "vegetation_leaf0.obj": {
+      "removed": 630,
+      "added": 714,
+      "preserved": 8778
+    },
+    "vegetation_leaf1.obj": {
+      "removed": 546,
+      "added": 588,
+      "preserved": 8106
+    },
+    "vegetation_leaf2.obj": {
+      "removed": 336,
+      "added": 378,
+      "preserved": 7854
+    },
+    "vegetation_leaf3.obj": {
+      "removed": 504,
+      "added": 672,
+      "preserved": 8190
+    },
+    "yard_grey_yard.obj": {
+      "removed": 44,
+      "added": 1830,
+      "preserved": 77
+    }
+  },
+  "note": "Static geometry/export checks only. Gate clearance is a local geometric measure, not a Gazebo driveability test. Graded entrance blends back to flat yard behind the rail; main road grades unchanged."
+}

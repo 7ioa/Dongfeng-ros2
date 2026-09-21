@@ -1,0 +1,21 @@
+{
+  "scope": "Only the northbound arrow beside the three-way arrow: replaced the straight symbol with a right-bending symbol, positioned 0.28 m farther north to approximate the reference photo.",
+  "unchanged_files_from_pre_change_snapshot": 132,
+  "unchanged_visual_mesh_groups": 33,
+  "unchanged_marking_triangles": 5544,
+  "removed_marking_triangles": 5,
+  "added_marking_triangles": 7,
+  "changed_geometry_min_m": [
+    1.799,
+    3.255,
+    0.004
+  ],
+  "changed_geometry_max_m": [
+    1.863,
+    3.465,
+    0.004
+  ],
+  "paint_faces_upward": true,
+  "opposite_lane_arrow_crosswalks_lane_lines_previous_side_approach_edit_and_collision_meshes_unchanged": true,
+  "note": "Static geometry and export validation. Check images are drawn from actual exported meshes; Gazebo runtime was not tested."
+}

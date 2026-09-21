@@ -6,6 +6,9 @@
 /install_control/
 /log_control/
 
+# Local screenshots generated for visual checks.
+/check_screenshots/
+
 # Python caches and local environments.
 __pycache__/
 *.py[cod]
@@ -29,6 +32,9 @@ Thumbs.db
 
 # Historical copy checksum list, not a manifest of the Git repository.
 /migration_manifest.sha256
+
+# Local migration handoff notes.
+/docs/迁移交接说明.md
 
 # Keep model assets (*.obj, *.mtl, *.glb), exports/, previews/, reports/,
 # and viewer/vendor/ under version control.

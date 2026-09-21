@@ -1,0 +1,21 @@
+{
+  "description": "工业楼按实物照片近似：东侧细长架空连廊连接西侧三段楼体，楼体间保留凹槽，屋顶每段一大一小两扇窗。单位为米。",
+  "wing_center_x": 0.755,
+  "wing_centers_y": [2.975, 3.16, 3.345],
+  "wing_size": [0.23, 0.132],
+  "wing_height": 0.174,
+  "spine_bounds": [0.865, 2.892, 0.99, 3.428],
+  "spine_bottom": 0.155,
+  "spine_height": 0.043,
+  "column_x": 0.977,
+  "column_count": 9,
+  "skylights": [
+    {"center_x": 0.773, "size": [0.059, 0.059], "material": "roof_dark"},
+    {"center_x": 0.657, "size": [0.047, 0.047], "material": "glass_light"}
+  ],
+  "references": [
+    "reference_photos/map/21074744cfc02b0c271d6fa9312f3f03.jpg",
+    "reference_photos/map/91e6b4f165d1aa793f6bcc50f8c688d7.jpg",
+    "reference_photos/map/f5f2a0c382c7cfb08d4385a0e76c18cd.jpg"
+  ]
+}

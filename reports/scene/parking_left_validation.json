@@ -1,0 +1,415 @@
+{
+  "scope": "Parking lot left junction only; right entrance, previous central markings, buildings, car and road grades preserved.",
+  "photo_fit": "Approximate proportions from four photos, not surveyed measurements.",
+  "preserved_files": 111,
+  "unchanged_mesh_files": [
+    "base_base.obj",
+    "boundary_acrylic.obj",
+    "boundary_blue_board.obj",
+    "buildings_frame.obj",
+    "buildings_glass.obj",
+    "buildings_glass_light.obj",
+    "buildings_red.obj",
+    "buildings_roof.obj",
+    "buildings_roof_dark.obj",
+    "buildings_white.obj",
+    "collision_base.obj",
+    "collision_buildings.obj",
+    "collision_road_deck.obj",
+    "collision_terrain.obj",
+    "elevated_road_asphalt.obj",
+    "elevated_road_deck_side.obj",
+    "ground_asphalt.obj",
+    "landscape_grey_yard.obj",
+    "landscape_paving.obj",
+    "landscape_water.obj",
+    "yard_grass.obj"
+  ],
+  "mesh_scope_checks": {
+    "collision_barriers.obj": {
+      "removed_triangles": 165,
+      "added_triangles": 757,
+      "unchanged_triangles": 5847,
+      "changed_bounds_m": [
+        [
+          0.3425,
+          3.672064,
+          0.011
+        ],
+        [
+          1.163429,
+          4.392588,
+          0.117621
+        ]
+      ]
+    },
+    "collision_furniture.obj": {
+      "removed_triangles": 84,
+      "added_triangles": 128,
+      "unchanged_triangles": 740,
+      "changed_bounds_m": [
+        [
+          0.069,
+          3.364,
+          0.002
+        ],
+        [
+          0.9175,
+          4.3215,
+          0.421559
+        ]
+      ]
+    },
+    "collision_kerbs.obj": {
+      "removed_triangles": 108,
+      "added_triangles": 420,
+      "unchanged_triangles": 1056,
+      "changed_bounds_m": [
+        [
+          0.37,
+          2.72,
+          0.0
+        ],
+        [
+          1.34,
+          4.378352,
+          0.012
+        ]
+      ]
+    },
+    "collision_trees.obj": {
+      "removed_triangles": 240,
+      "added_triangles": 280,
+      "unchanged_triangles": 3880,
+      "changed_bounds_m": [
+        [
+          0.417141,
+          3.255766,
+          0.015
+        ],
+        [
+          1.300196,
+          4.348845,
+          0.111767
+        ]
+      ]
+    },
+    "landscape_grass.obj": {
+      "removed_triangles": 27,
+      "added_triangles": 27,
+      "unchanged_triangles": 259,
+      "changed_bounds_m": [
+        [
+          0.388,
+          2.738,
+          0.013
+        ],
+        [
+          1.322,
+          3.575183,
+          0.013
+        ]
+      ]
+    },
+    "landscape_kerb.obj": {
+      "removed_triangles": 108,
+      "added_triangles": 420,
+      "unchanged_triangles": 1056,
+      "changed_bounds_m": [
+        [
+          0.37,
+          2.72,
+          0.0
+        ],
+        [
+          1.34,
+          4.378352,
+          0.012
+        ]
+      ]
+    },
+    "markings_white.obj": {
+      "removed_triangles": 346,
+      "added_triangles": 401,
+      "unchanged_triangles": 5205,
+      "changed_bounds_m": [
+        [
+          0.04,
+          2.869394,
+          0.002
+        ],
+        [
+          1.3425,
+          4.409249,
+          0.048839
+        ]
+      ]
+    },
+    "rails_black.obj": {
+      "removed_triangles": 0,
+      "added_triangles": 1872,
+      "unchanged_triangles": 0,
+      "changed_bounds_m": [
+        [
+          0.618,
+          4.051504,
+          0.011
+        ],
+        [
+          1.163429,
+          4.392588,
+          0.055
+        ]
+      ]
+    },
+    "rails_steel.obj": {
+      "removed_triangles": 479,
+      "added_triangles": 39,
+      "unchanged_triangles": 14141,
+      "changed_bounds_m": [
+        [
+          0.3425,
+          3.672064,
+          0.002
+        ],
+        [
+          1.060037,
+          4.332979,
+          0.122621
+        ]
+      ]
+    },
+    "street_furniture_black.obj": {
+      "removed_triangles": 12,
+      "added_triangles": 12,
+      "unchanged_triangles": 84,
+      "changed_bounds_m": [
+        [
+          0.14,
+          3.354,
+          0.236
+        ],
+        [
+          0.625,
+          3.566,
+          0.285
+        ]
+      ]
+    },
+    "street_furniture_glass.obj": {
+      "removed_triangles": 0,
+      "added_triangles": 48,
+      "unchanged_triangles": 0,
+      "changed_bounds_m": [
+        [
+          0.52775,
+          4.04525,
+          0.046
+        ],
+        [
+          0.59225,
+          4.10475,
+          0.075
+        ]
+      ]
+    },
+    "street_furniture_light_green.obj": {
+      "removed_triangles": 48,
+      "added_triangles": 48,
+      "unchanged_triangles": 336,
+      "changed_bounds_m": [
+        [
+          0.273,
+          3.34,
+          0.248
+        ],
+        [
+          0.592,
+          3.544,
+          0.272
+        ]
+      ]
+    },
+    "street_furniture_red.obj": {
+      "removed_triangles": 112,
+      "added_triangles": 112,
+      "unchanged_triangles": 268,
+      "changed_bounds_m": [
+        [
+          0.384292,
+          4.121358,
+          0.126
+        ],
+        [
+          0.939,
+          4.289649,
+          0.413484
+        ]
+      ]
+    },
+    "street_furniture_roof.obj": {
+      "removed_triangles": 12,
+      "added_triangles": 24,
+      "unchanged_triangles": 12,
+      "changed_bounds_m": [
+        [
+          0.356,
+          4.039,
+          0.052
+        ],
+        [
+          0.5985,
+          4.3135,
+          0.106
+        ]
+      ]
+    },
+    "street_furniture_steel.obj": {
+      "removed_triangles": 164,
+      "added_triangles": 164,
+      "unchanged_triangles": 2344,
+      "changed_bounds_m": [
+        [
+          0.069,
+          3.34,
+          0.01
+        ],
+        [
+          0.9175,
+          4.246289,
+          0.272
+        ]
+      ]
+    },
+    "street_furniture_white.obj": {
+      "removed_triangles": 356,
+      "added_triangles": 348,
+      "unchanged_triangles": 4356,
+      "changed_bounds_m": [
+        [
+          0.380989,
+          4.042,
+          0.002
+        ],
+        [
+          0.979217,
+          4.293469,
+          0.482
+        ]
+      ]
+    },
+    "street_furniture_yellow.obj": {
+      "removed_triangles": 32,
+      "added_triangles": 44,
+      "unchanged_triangles": 316,
+      "changed_bounds_m": [
+        [
+          0.349,
+          4.100059,
+          0.002
+        ],
+        [
+          0.88133,
+          4.3215,
+          0.22297
+        ]
+      ]
+    },
+    "vegetation_bark.obj": {
+      "removed_triangles": 240,
+      "added_triangles": 280,
+      "unchanged_triangles": 3880,
+      "changed_bounds_m": [
+        [
+          0.417141,
+          3.255766,
+          0.015
+        ],
+        [
+          1.300196,
+          4.348845,
+          0.111767
+        ]
+      ]
+    },
+    "vegetation_leaf0.obj": {
+      "removed_triangles": 798,
+      "added_triangles": 882,
+      "unchanged_triangles": 8526,
+      "changed_bounds_m": [
+        [
+          0.419514,
+          3.238078,
+          0.0549
+        ],
+        [
+          1.319298,
+          4.358406,
+          0.149529
+        ]
+      ]
+    },
+    "vegetation_leaf1.obj": {
+      "removed_triangles": 420,
+      "added_triangles": 546,
+      "unchanged_triangles": 8106,
+      "changed_bounds_m": [
+        [
+          0.407736,
+          3.321431,
+          0.0549
+        ],
+        [
+          1.295239,
+          4.154872,
+          0.14689
+        ]
+      ]
+    },
+    "vegetation_leaf2.obj": {
+      "removed_triangles": 336,
+      "added_triangles": 378,
+      "unchanged_triangles": 7812,
+      "changed_bounds_m": [
+        [
+          0.394772,
+          3.234281,
+          0.06049
+        ],
+        [
+          1.313223,
+          4.348131,
+          0.142882
+        ]
+      ]
+    },
+    "vegetation_leaf3.obj": {
+      "removed_triangles": 462,
+      "added_triangles": 546,
+      "unchanged_triangles": 8148,
+      "changed_bounds_m": [
+        [
+          0.474041,
+          3.251259,
+          0.0549
+        ],
+        [
+          1.324157,
+          4.357728,
+          0.156119
+        ]
+      ]
+    },
+    "yard_grey_yard.obj": {
+      "boundary_change_confined_to_left_corner": true,
+      "remaining_boundary_edges_unchanged": 74
+    }
+  },
+  "entrance_clear_width_between_base_footprints_m": 0.1959,
+  "barrier_arm_angle_deg": 80,
+  "yard_boundary_simple_monotone_and_joined": true,
+  "factory_island_outline_simple": true,
+  "road_deck_and_terrain_unchanged": true,
+  "outer_lane_arrow_follows_road_grade": true,
+  "note": "Static export, collision-resource and geometric-scope checks only. No Gazebo driving test."
+}

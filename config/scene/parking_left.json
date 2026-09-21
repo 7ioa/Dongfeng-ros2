@@ -1,0 +1,29 @@
+{
+  "description": "停车场左侧路口的照片近似修正；仅作用于左前角、对面工业绿岛的北缘和入口设施，单位为米。",
+  "yard_corner_start": [0.347, 4.30],
+  "yard_corner_controls": [[0.347, 4.12], [0.415, 4.035], [0.61, 4.035]],
+  "yard_blend_control": [0.83, 4.035],
+  "yard_join_sample": 15,
+  "kerb_start_x": 0.585,
+  "kerb_width": 0.014,
+  "kerb_height": 0.010,
+  "inner_rail_end_y": 4.30,
+  "gate_base": [0.374, 4.29],
+  "gate_arm_length": 0.33,
+  "gate_open_angle_deg": 80,
+  "booth_position": [0.56, 4.075],
+  "factory_north_start": [0.37, 3.21],
+  "factory_north_curves": [
+    [[0.37, 3.49], [0.46, 3.66], [0.66, 3.66]],
+    [[0.84, 3.66], [0.95, 3.42], [1.10, 3.42]],
+    [[1.25, 3.42], [1.34, 3.41], [1.34, 3.24]]
+  ],
+  "factory_north_samples_per_curve": 32,
+  "factory_north_lamp_position": [1.29, 3.28],
+  "references": [
+    "reference_photos/map/21074744cfc02b0c271d6fa9312f3f03.jpg",
+    "reference_photos/map/91e6b4f165d1aa793f6bcc50f8c688d7.jpg",
+    "reference_photos/map/315d237356e7921275da48357671ca75.jpg",
+    "reference_photos/map/f5f2a0c382c7cfb08d4385a0e76c18cd.jpg"
+  ]
+}

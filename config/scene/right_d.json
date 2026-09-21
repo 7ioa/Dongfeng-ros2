@@ -1,0 +1,34 @@
+{
+  "description": "用户截图中右侧 D 处（生成器 P4 特色建筑区）及停车场右入口，按多角度照片近似，单位为米。",
+  "island_north_start": [1.96, 3.18],
+  "island_north_curves": [
+    [[1.96, 3.39], [2.06, 3.36], [2.23, 3.47]],
+    [[2.40, 3.58], [2.47, 3.70], [2.65, 3.70]],
+    [[2.83, 3.70], [2.93, 3.59], [2.93, 3.32]]
+  ],
+  "samples_per_curve": 32,
+  "yard_join_sample": 34,
+  "yard_front_controls": [[2.30, 4.20], [2.46, 4.035], [2.68, 4.035]],
+  "yard_corner_controls": [[2.84, 4.035], [2.953, 4.11], [2.953, 4.30]],
+  "kerb_end_x": 2.68,
+  "inner_rail_end_y": 4.30,
+  "gate_base": [2.685, 4.070],
+  "booth_position": [2.918, 4.275],
+  "gate_open_angle_deg": 82,
+  "gate_arm_length": 0.34,
+  "island_lamps": [[2.06, 3.28, 0], [2.53, 2.755, 1.5707963267948966]],
+  "u_building": {
+    "outline": [[2.065, 2.965], [2.175, 2.965], [2.175, 3.105], [2.285, 3.105], [2.285, 2.965], [2.395, 2.965], [2.395, 3.295], [2.065, 3.295]],
+    "height": 0.128,
+    "canopy_height": 0.183
+  },
+  "wedge": {"bounds": [2.49, 2.955, 2.625, 3.47], "low_height": 0.062, "high_height": 0.30},
+  "shed": {"center": [2.775, 3.43], "size": [0.135, 0.16], "wall_height": 0.045, "arch_height": 0.048},
+  "utility_cabinet": [2.54, 2.87],
+  "references": [
+    "reference_photos/map/21074744cfc02b0c271d6fa9312f3f03.jpg",
+    "reference_photos/map/91e6b4f165d1aa793f6bcc50f8c688d7.jpg",
+    "reference_photos/map/315d237356e7921275da48357671ca75.jpg",
+    "reference_photos/map/813019bd5c862b5949d8fa52357f8967.jpg"
+  ]
+}

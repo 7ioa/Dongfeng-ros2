@@ -1,0 +1,100 @@
+{
+  "scope": "Only the two horizontal approaches to the central junction; two opposing lanes per approach.",
+  "lane_width_m": 0.31,
+  "lane_dividers_added": 2,
+  "arrows_added": 4,
+  "old_single_lane_arrows_removed": 2,
+  "unchanged_tracked_files": 130,
+  "changed_files": [
+    "exports/scene/dongfeng_sandbox.glb",
+    "exports/scene/dongfeng_sandbox.obj",
+    "models/dongfeng_sandbox/meshes/markings_white.obj",
+    "previews/scene/index.html",
+    "previews/scene/scene-data.json",
+    "reports/scene/export_validation.json",
+    "reports/scene/validation.json",
+    "scripts/scene/generate_scene.py"
+  ],
+  "unchanged_visual_mesh_groups": 33,
+  "unchanged_marking_triangles": 5299,
+  "removed_marking_triangles": 10,
+  "added_marking_triangles": 236,
+  "changes_confined_to_side_approaches": true,
+  "paint_faces_upward": true,
+  "paint_components": [
+    {
+      "min": [
+        0.34,
+        2.4075,
+        0.003
+      ],
+      "max": [
+        1.2445,
+        2.4125,
+        0.003
+      ]
+    },
+    {
+      "min": [
+        2.0555,
+        2.4075,
+        0.003
+      ],
+      "max": [
+        2.96,
+        2.4125,
+        0.003
+      ]
+    },
+    {
+      "min": [
+        0.93,
+        2.193,
+        0.004
+      ],
+      "max": [
+        1.185,
+        2.317,
+        0.004
+      ]
+    },
+    {
+      "min": [
+        0.555,
+        2.507,
+        0.004
+      ],
+      "max": [
+        0.765,
+        2.571,
+        0.004
+      ]
+    },
+    {
+      "min": [
+        2.115,
+        2.503,
+        0.004
+      ],
+      "max": [
+        2.37,
+        2.627,
+        0.004
+      ]
+    },
+    {
+      "min": [
+        2.535,
+        2.249,
+        0.004
+      ],
+      "max": [
+        2.745,
+        2.313,
+        0.004
+      ]
+    }
+  ],
+  "existing_crosswalks_centre_of_junction_other_roads_and_collision_meshes_unchanged": true,
+  "note": "Photo-based placement; screenshots are orthographic views of actual exported meshes. No Gazebo runtime test."
+}

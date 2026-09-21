@@ -1,0 +1,69 @@
+{
+  "scope": "Only the factory island north curb, adjacent tree row, and the stop-line endpoint touching it.",
+  "curve": "Single half-ellipse, tangent to the unchanged straight sides, sampled in 64 segments.",
+  "cap_radii_m": [
+    0.48499999999999993,
+    0.3700000000000001
+  ],
+  "cap_peak_y_m": 3.64,
+  "maximum_cap_segment_length_m": 0.023801995000459958,
+  "maximum_segment_direction_change_deg": 3.679767902783326,
+  "buildings_and_lamp_footprints_still_inside": true,
+  "tree_count": 208,
+  "parking_edge_gate_booth_rails_and_all_furniture_unchanged": true,
+  "protected_file_count": 127,
+  "unchanged_mesh_count": 34,
+  "changed_mesh_triangles": {
+    "collision_kerbs.obj": {
+      "removed": 108,
+      "added": 264,
+      "preserved": 1368
+    },
+    "collision_trees.obj": {
+      "removed": 200,
+      "added": 200,
+      "preserved": 3960
+    },
+    "landscape_grass.obj": {
+      "removed": 27,
+      "added": 66,
+      "preserved": 259
+    },
+    "landscape_kerb.obj": {
+      "removed": 108,
+      "added": 264,
+      "preserved": 1368
+    },
+    "markings_white.obj": {
+      "removed": 280,
+      "added": 336,
+      "preserved": 5326
+    },
+    "vegetation_bark.obj": {
+      "removed": 200,
+      "added": 200,
+      "preserved": 3960
+    },
+    "vegetation_leaf0.obj": {
+      "removed": 672,
+      "added": 672,
+      "preserved": 8736
+    },
+    "vegetation_leaf1.obj": {
+      "removed": 420,
+      "added": 420,
+      "preserved": 8232
+    },
+    "vegetation_leaf2.obj": {
+      "removed": 252,
+      "added": 252,
+      "preserved": 7938
+    },
+    "vegetation_leaf3.obj": {
+      "removed": 336,
+      "added": 336,
+      "preserved": 8358
+    }
+  },
+  "note": "Static exported-mesh checks. No Gazebo runtime test."
+}
