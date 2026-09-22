@@ -45,3 +45,6 @@ Thumbs.db
 # project sources. Hand-written markdown summaries remain versioned.
 /reports/autonomy/**
 !/reports/autonomy/*.md
+
+# Local debugging programs and their outputs; never commit these tests.
+/local_tests/

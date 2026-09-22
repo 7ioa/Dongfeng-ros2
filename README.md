@@ -290,7 +290,9 @@ bash launch_car.sh
 sudo apt update
 sudo apt install ros-jazzy-ros-gz ros-jazzy-xacro \
   ros-jazzy-robot-state-publisher ros-jazzy-rclpy \
-  ros-jazzy-geometry-msgs python3-colcon-common-extensions
+  ros-jazzy-geometry-msgs python3-colcon-common-extensions \
+  ros-jazzy-gz-gui-vendor ros-jazzy-gz-rendering-vendor \
+  build-essential pkg-config qtbase5-dev qtdeclarative5-dev libogre-1.9-dev
 ```
 
 启动参数可以直接追加，例如无界面运行：
@@ -413,6 +415,12 @@ bash launch_car.sh --autonomy headless:=true headless_rendering:=false
 ```
 
 入口自动构建，默认设置 `QT_QPA_PLATFORM=xcb`、GUI `--render-engine ogre`。GUI 沿用 `launch_car.sh` 的硬件渲染环境；仅独立服务器设置 `LIBGL_ALWAYS_SOFTWARE=1`，通过 `--render-engine-server ogre2` 渲染相机与 GPU 雷达。不要在终端全局强制软件渲染；`sensor_software_rendering` 和 `sensor_render_engine` 可单独配置。VMware 上请保持有效的 `DISPLAY`，软件渲染不要与 EGL 的 `headless_rendering:=true` 混用。
+
+正式入口同时自动加载 `TrafficLightMaterialSync` GUI 插件，覆盖地图中的 8 组红绿灯。
+它修正 Ogre 1 基础材质已变色、实际绘制 pass 仍保留旧色的问题，避免窗口一直红灯或全黑。
+灯色仍由原 `traffic_signals` 节点控制，小车仍根据相机画面判断启停；插件只同步窗口材质。
+启动时会从场景或指定的 `gui_config` 生成临时 GUI 配置，保留原有视角与工具，退出后清理；
+无界面运行不加载此插件，Ogre 2 材质不会被修改。更新代码后需关闭旧场景并重新启动。
 
 另开终端运行 `bash keyboard_control.sh`，按空格停车；任意手动命令都会退出自动模式。重新启用：
 

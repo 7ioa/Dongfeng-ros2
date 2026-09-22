@@ -27,16 +27,18 @@ Headless, for scripted checks without a GUI:
 """
 
 import os
+import re
 import shlex
+import tempfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
                             OpaqueFunction, SetEnvironmentVariable, GroupAction,
                             RegisterEventHandler, EmitEvent, LogInfo)
-from launch.event_handlers import OnProcessExit
+from launch.event_handlers import OnProcessExit, OnShutdown
 from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
@@ -62,6 +64,34 @@ def _find_scene_root():
     return None
 
 
+def _prepare_gui_config(world_element, source):
+    """Add the material fix without editing the world or a user's GUI file."""
+    if source:
+        # Gazebo GUI files are XML fragments, often with an XML declaration.
+        text = Path(source).read_text()
+        text = re.sub(r'^\s*<\?xml[^>]*\?>', '', text, count=1)
+        gui = ET.fromstring('<gui>' + text + '</gui>')
+    else:
+        gui = world_element.find('gui')
+        if gui is None:
+            # Preserve Gazebo's default GUI selection for unrelated worlds.
+            return None
+    filename = 'TrafficLightMaterialSync'
+    if not any(p.get('filename') == filename for p in gui.findall('plugin')):
+        plugin = ET.SubElement(gui, 'plugin', filename=filename,
+                               name='Traffic light material sync')
+        properties = ET.SubElement(plugin, 'gz-gui')
+        for key, kind, value in [('state', 'string', 'floating'),
+                                 ('showTitleBar', 'bool', 'false'),
+                                 ('width', 'double', '1'),
+                                 ('height', 'double', '1')]:
+            ET.SubElement(properties, 'property', key=key, type=kind).text = value
+    with tempfile.NamedTemporaryFile(mode='w', prefix='dongfeng_gui_',
+                                     suffix='.config', delete=False) as config:
+        config.write(''.join(ET.tostring(child, encoding='unicode') for child in gui))
+        return config.name
+
+
 def _launch_setup(context, *args, **kwargs):
     def value(name):
         return LaunchConfiguration(name).perform(context)
@@ -76,6 +106,25 @@ def _launch_setup(context, *args, **kwargs):
     if world_element is None or not world_element.get('name'):
         raise RuntimeError(f'SDF has no named world: {world}')
 
+    gui_config = value('gui_config')
+    gui_actions = []
+    if not flag('headless'):
+        generated_config = _prepare_gui_config(world_element, gui_config)
+        if generated_config:
+            gui_config = generated_config
+
+            def cleanup_gui(_context):
+                Path(generated_config).unlink(missing_ok=True)
+                return []
+
+            gui_actions.append(RegisterEventHandler(OnShutdown(
+                on_shutdown=[OpaqueFunction(function=cleanup_gui)])))
+        plugin_path = str(Path(get_package_prefix('dongfeng_bringup')) /
+                          'lib' / 'dongfeng_bringup')
+        gui_actions.append(SetEnvironmentVariable('GZ_GUI_PLUGIN_PATH',
+            os.pathsep.join(filter(None, [plugin_path,
+                os.environ.get('GZ_GUI_PLUGIN_PATH', '')]))))
+
     # Gazebo command line. Flags first, world file last.
     gz_args = []
     software_sensors=flag('sensor_software_rendering')
@@ -89,8 +138,8 @@ def _launch_setup(context, *args, **kwargs):
     if value('render_engine').strip():
         gz_args += ['--render-engine', value('render_engine').strip()]
     gz_args += ['--render-engine-server', value('sensor_render_engine')]
-    if value('gui_config'):
-        gz_args += ['--gui-config',value('gui_config')]
+    if gui_config:
+        gz_args += ['--gui-config', gui_config]
     if flag('verbose'):
         gz_args += ['-v', '4']
     gz_args.append(world)
@@ -107,7 +156,7 @@ def _launch_setup(context, *args, **kwargs):
             SetEnvironmentVariable('LIBGL_ALWAYS_SOFTWARE','1'),server])]
         if not flag('headless'):
             gui_args=['-g','--render-engine',value('render_engine')]
-            if value('gui_config'):gui_args+=['--gui-config',value('gui_config')]
+            if gui_config:gui_args+=['--gui-config', gui_config]
             gazebo_actions.append(GroupAction(actions=[IncludeLaunchDescription(
                 gz_launch,launch_arguments={'gz_args':shlex.join(gui_args),
                     'on_exit_shutdown':'true'}.items())]))
@@ -153,6 +202,7 @@ def _launch_setup(context, *args, **kwargs):
         # Must be set before gz sim starts, so model://dongfeng_sandbox resolves.
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', resource_path),
         SetEnvironmentVariable('QT_QPA_PLATFORM', os.environ.get('QT_QPA_PLATFORM', 'xcb')),
+        *gui_actions,
 
         RegisterEventHandler(OnProcessExit(target_action=guard,
             on_exit=[EmitEvent(event=Shutdown(reason='Command guard stopped.'))])),

@@ -11,6 +11,12 @@
   <license>Proprietary</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+  <depend>gz_gui_vendor</depend>
+  <depend>gz_rendering_vendor</depend>
+  <depend>libogre-dev</depend>
+  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>qtdeclarative5-dev</build_depend>
 
   <exec_depend>dongfeng_description</exec_depend>
   <exec_depend>dongfeng_autonomy</exec_depend>
