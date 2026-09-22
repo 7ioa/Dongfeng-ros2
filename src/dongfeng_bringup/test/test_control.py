@@ -123,3 +123,11 @@ class IntegrationConfigTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+class ManualStreamTest(unittest.TestCase):
+    def test_idle_does_not_revoke_auto_but_stop_key_does(self):
+        from command_logic import manual_publish_needed
+        self.assertFalse(manual_publish_needed((0.,0.),(0.,0.),False))
+        self.assertTrue(manual_publish_needed((0.,0.),(0.,0.),True))
+        self.assertTrue(manual_publish_needed((.1,0.),(.1,0.),False))
+        self.assertTrue(manual_publish_needed((0.,0.),(.1,0.),False))

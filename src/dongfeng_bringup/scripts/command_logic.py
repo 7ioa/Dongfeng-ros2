@@ -5,6 +5,11 @@ MAX_LINEAR = 0.25
 MAX_ANGULAR = 1.2
 
 
+def manual_publish_needed(velocity, previous, key_received):
+    """An idle terminal must not continuously revoke automatic control."""
+    return key_received or velocity != (0.,0.) or previous != (0.,0.)
+
+
 class TerminalKeys:
     """Suppress escape sequences even when terminal reads split their bytes."""
     def __init__(self):

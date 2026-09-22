@@ -105,7 +105,7 @@ cd ~/dongfeng_sandbox
 QT_QPA_PLATFORM=xcb bash launch_gazebo.sh --render-engine ogre
 ```
 
-其中 `QT_QPA_PLATFORM=xcb` 指定 Qt 的 X11 显示后端，`--render-engine ogre` 切换为 Ogre 1 渲染引擎。这些设置只作用于本次启动；后续打开场景时可继续使用这条命令。
+其中 `QT_QPA_PLATFORM=xcb` 指定 Qt 的 X11 显示后端，`--render-engine ogre` 切换为 Ogre 1 渲染引擎。场景入口现在默认使用这组设置；上面的显式写法仍然可用。自主驾驶将 GUI 与传感器渲染分开：场景窗口用 Ogre 1，相机和 GPU 雷达用 Ogre2 软件渲染。
 
 ### 手动设置资源目录
 
@@ -269,7 +269,7 @@ python3 scripts/scene/build_preview.py
 
 在原有小车控制接口上，按五张实车照片重建黑色四轮车体、青色辐条轮毂、双层镂空板、前部弧形护框、电路板与线缆、五颗灰色标记球，以及前向摄像头、前置圆柱雷达和后部充电口。**本项目目录同时是 colcon 工作区**，机器人相关代码在 `src/` 下，与场景生成解耦。地图沿用同伴更新的版本，小车仍在运行时通过 Gazebo create 服务单独生成。
 
-此次是外形与安装坐标的近似重建，尺寸依据现有约 20 cm 车长和照片比例。摄像头与雷达目前包含外壳、碰撞体和坐标系，尚不输出图像、点云或 `/scan`。
+此次是外形与安装坐标的近似重建，尺寸依据现有约 20 cm 车长和照片比例。摄像头、GPU 雷达和 IMU 已接入 Gazebo 真实传感器，输出图像、`/scan` 和姿态；自主巡航入口见第 9 节。
 
 ### 8.1 启动地图与小车
 
@@ -280,9 +280,9 @@ cd ~/dongfeng_sandbox
 bash launch_car.sh
 ```
 
-脚本自动加载 ROS 2、编译两个小车包、打开现有地图、生成小车并启动控制桥接。默认使用之前有效的 **xcb + Ogre** 设置。小车生成在 **AB 端横向直路中间**，车头朝地图 +X（从 A 朝 B）。不需要再另开 `launch_gazebo.sh`。
+脚本自动加载 ROS 2、编译三个 ROS 包、打开现有地图、生成小车并启动控制桥接。默认使用之前有效的 **xcb + Ogre** 设置。小车生成在 **AB 端横向直路中间**，车头朝地图 +X（从 A 朝 B）。不需要再另开 `launch_gazebo.sh`。
 
-编译产物放在 `build_control/`、`install_control/`、`log_control/`，避免复用同伴电脑中的绝对路径；每次启动会刷新 CMake 缓存，文件夹移动后也可以重建。摄像头与雷达的数据功能不参与本次启动。
+编译产物放在 `build_control/`、`install_control/`、`log_control/`，避免复用同伴电脑中的绝对路径；每次启动会刷新 CMake 缓存，文件夹移动后也可以重建。手动模式也会启动传感器，但不会自动行驶。
 
 如果提示缺少依赖，在 Ubuntu 中安装一次：
 
@@ -327,9 +327,9 @@ bash keyboard_control.sh
 
 默认前进速度 **0.10 m/s**，转速 **0.65 rad/s**；最高限制为 ±0.25 m/s、±1.2 rad/s。终端没有按键释放事件，因此用按键重复判断长按：**松键约 0.65 秒后发送零速**，车体随后按减速度停止；需要主动停车时按空格。若 Ubuntu 的按键重复被关闭，持续按住会变成短时移动；可在系统键盘设置中启用按键重复。方向键不支持，收到方向键序列时停车。
 
-控制链路：`键盘 → ROS /cmd_vel → command_guard → ROS /cmd_vel_safe → ros_gz_bridge → Gazebo /cmd_vel → 四轮 DiffDrive`。控制节点限速、过滤非有限值，并在 **0.4 秒未收到新命令**时发送零速；使用单调时钟，因此暂停仿真时也能让过期命令失效。退出键盘程序后地图仍保持打开。
+控制链路：`键盘 → /cmd_vel_manual → command_arbiter → /cmd_vel → command_guard → /cmd_vel_safe → ros_gz_bridge → Gazebo /cmd_vel → 四轮 DiffDrive`。控制节点限速、过滤非有限值，并在 **0.4 秒未收到新命令**时发送零速；使用单调时钟，因此暂停仿真时也能让过期命令失效。退出键盘程序后地图仍保持打开。
 
-也可以继续用其他程序发布 ROS `/cmd_vel`，但应以至少 10 Hz 连续发布；单次命令会在超时后停车。不要同时运行多个键盘控制程序。
+其他手动程序应发布 ROS `/cmd_vel_manual`，以至少 10 Hz 连续发布；手动命令会锁定退出自动模式，单次命令会在超时后停车。`/cmd_vel` 由仲裁器唯一发布。不要同时运行多个键盘控制程序。
 
 ### 8.3 检查 /odom 与 TF
 
@@ -347,7 +347,7 @@ ros2 topic echo /joint_states --once      # 四个车轮的角度与角速度
 
 TF 树：`odom → base_link` 由 DiffDrive 经 gz `/tf` 桥接发布。四个转动车轮为 `wheel_left_link`、`wheel_right_link`、`wheel_left_front_link`、`wheel_right_front_link`，由 robot_state_publisher 根据 `/joint_states` 发布。固定坐标为 `base_link → lidar_link / camera_link → camera_optical_frame`；原来的前后球形支撑已替换为四轮结构。车体 +X 向前、+Y 向左、+Z 向上；相机光学坐标 +Z 向前、+X 向右、+Y 向下。
 
-话题桥接在 `src/dongfeng_bringup/config/bridge.yaml`：`/clock`、`/cmd_vel_safe → Gazebo /cmd_vel`、`/odom`、`/tf`、`/joint_states`。`/odom` 的原点是小车启动时的位置，不能将它直接当作沙盘世界坐标。
+话题桥接在 `src/dongfeng_bringup/config/bridge.yaml`：`/clock`、`/cmd_vel_safe → Gazebo /cmd_vel`、`/odom`、`/tf`、`/joint_states`、`/camera/image_raw`、`/camera/camera_info`、`/scan`、`/imu/data`。`/odom` 的原点是小车启动时的位置，不能将它直接当作沙盘世界坐标。
 
 ### 8.4 小车参数
 
@@ -380,13 +380,13 @@ source install_control/local_setup.bash
 
 ### 8.5 已知行为
 
-- **动力学尚待验证**：四轮与双轮支撑不同，转弯会产生侧向摩擦；真实转弯半径、爬坡和碰撞行为需要在 Ubuntu Gazebo 中进一步验证和调整。四轮由同一个 DiffDrive 控制器驱动；前进、倒退及左右转向均有对称速度/加速度限制。
-- **当前需要人工驾驶**：模型尚未接入传感器数据与避障，驶出道路或顶住路缘时需停止控制指令。
+- 四轮由同一个 DiffDrive 控制器驱动，通过 WheelSlip 模拟转向侧滑。轮胎摩擦参数需要经过实际 URDF→SDF 转换核验；参数和实测见 `reports/autonomy/2026-09-22-validation.md`。
+- `launch_car.sh` 默认为手动驾驶；`launch_car.sh --autonomy` 启动自主巡航，`launch_autonomy.sh` 是同一入口的快捷方式。自动模式仍可用键盘空格停车，恢复需显式启用。
 - 启动日志中 `kdl_parser: The root link base_link has an inertia specified in the URDF` 是无害提示（KDL 不支持带惯量的根链接），不影响仿真与 TF。
 
 ### 8.6 本阶段不包含
 
-SLAM、Nav2、激光扫描、相机图像生成、视觉算法和传感器融合。摄像头和雷达外形及坐标已经完成，后续可在这些坐标系上接入仿真传感器。
+不包含 SLAM、Nav2、未知地图导航和实车标定。当前自主模式依赖已知地图与默认出生点。
 
 此次已完成五方向浏览器预览、URDF/OBJ/GLB 静态检查、四轮坐标核对，以及 11 项键盘/超时/限速控制回归检查。出生位置覆盖范围内的 775 个地面采样点高度均为 0，初始轮胎距路面 3 mm，用于重力落地。地图与压缩包内容未改变。检查结果见 `reports/vehicle/validation_report.json`、`reports/control/control_validation.json`。
 
@@ -396,4 +396,53 @@ SLAM、Nav2、激光扫描、相机图像生成、视觉算法和传感器融合
 python3 src/dongfeng_bringup/test/test_control.py
 ```
 
-当前 Windows 环境没有运行 ROS 2/Gazebo，实际驾驶效果仍需在 Ubuntu 虚拟机中启动验证。超时停车是针对 Gazebo DiffDrive 会保留最后速度指令的行为补充的（[官方实现](https://github.com/gazebosim/gz-sim/blob/gz-sim8/src/systems/diff_drive/DiffDrive.cc)）。
+目前已在 Ubuntu / ROS 2 Jazzy / Gazebo Harmonic 虚拟机完成实际驾驶验证，最新自主巡航结果见第 9 节和验收报告。超时停车是针对 Gazebo DiffDrive 会保留最后速度指令的行为补充的（[官方实现](https://github.com/gazebosim/gz-sim/blob/gz-sim8/src/systems/diff_drive/DiffDrive.cc)）。
+
+## 9. 传感器自主巡航
+
+目标是在原有地图从 `(1.65, 0.19)` 朝 +X 出发，经过 B/C/D/A 四个转角及右、左两处交通灯，回到起点后锁定停车。控制器使用相机灯色和道路观测、激光地图匹配、IMU 与轮式里程计；Gazebo 车辆真值和灯色控制状态仅用于独立验收。
+
+### 启动与接管
+
+依赖 ROS 2 Jazzy、Gazebo Harmonic、ros_gz、Python OpenCV、NumPy、SciPy。除第 8 节依赖外，可通过系统包安装 `python3-opencv python3-scipy ros-jazzy-sensor-msgs ros-jazzy-nav-msgs ros-jazzy-tf2-ros ros-jazzy-std-srvs`。
+
+```bash
+bash launch_car.sh --autonomy
+# 关闭场景窗口，但仍通过当前 X11 DISPLAY 渲染传感器：
+bash launch_car.sh --autonomy headless:=true headless_rendering:=false
+```
+
+入口自动构建，默认设置 `QT_QPA_PLATFORM=xcb`、GUI `--render-engine ogre`。GUI 沿用 `launch_car.sh` 的硬件渲染环境；仅独立服务器设置 `LIBGL_ALWAYS_SOFTWARE=1`，通过 `--render-engine-server ogre2` 渲染相机与 GPU 雷达。不要在终端全局强制软件渲染；`sensor_software_rendering` 和 `sensor_render_engine` 可单独配置。VMware 上请保持有效的 `DISPLAY`，软件渲染不要与 EGL 的 `headless_rendering:=true` 混用。
+
+另开终端运行 `bash keyboard_control.sh`，按空格停车；任意手动命令都会退出自动模式。重新启用：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install_control/local_setup.bash
+ros2 service call /autonomy/enable std_srvs/srv/SetBool '{data: true}'
+# 主动禁用：
+ros2 service call /autonomy/enable std_srvs/srv/SetBool '{data: false}'
+```
+
+传感器失联或过期时停车，恢复有效数据后可恢复；时钟回退需重启任务。完成状态保持停车，重新启用不会再次跑圈。默认直道 0.15 m/s、弯道/坡道 0.09 m/s，自动上限 0.15 m/s。启动可追加 `phase_offset:=8` 改变灯相位，`force_color:=red` / `green` 用于受控灯色测试。
+
+红灯、黄灯或灯色不可确认时，在本方向停车线前停车等待；当前方向绿灯需连续 3 个新图像帧确认后起步。`/autonomy/status.reason` 区分等待红灯/未知灯与短暂的绿灯确认。已越过停车线后完成驶离。
+
+### 观测与验收
+
+```bash
+ros2 topic echo /autonomy/status
+ros2 topic hz /camera/image_raw
+ros2 topic hz /scan
+ros2 topic hz /imu/data
+PYTHONPATH=src/dongfeng_autonomy python3 -m unittest discover -s src/dongfeng_autonomy/test -v
+python3 -m unittest discover -s src/dongfeng_bringup/test -v
+python3 scripts/autonomy/validate_run.py --gui --seconds 420 --domain 94 --output reports/autonomy/my_run
+python3 scripts/autonomy/validate_run.py --gui --seconds 420 --phase 8 --domain 95 --output reports/autonomy/my_run_phase8
+python3 scripts/autonomy/validate_run.py --gui --controlled-signals --domain 97 --output reports/autonomy/my_signal_stops
+python3 scripts/autonomy/validate_faults.py --domain 96 --output reports/autonomy/my_faults
+```
+
+验证脚本自行启动并清理仿真。不要同时开启同一域的旧实例；检查另一终端时设置相同 `ROS_DOMAIN_ID`，Gazebo 工具还需对应的 `GZ_PARTITION`。`/autonomy/debug_image` 显示灯头 ROI 和识别结果，`/autonomy/status` 包含停车原因、定位、数据年龄、进度和指令。
+
+独立验收输出 `truth.json`、`status.json`、`signals.json`、`summary.json` 及图像。`motion_lap_pass` 要求真实轨迹顺序经过四角、无跳点、轮廓在路内、回到起点并静止至少 2 秒；`traffic_pass` 要求两个车头越线事件均为绿灯且至少一次真实红灯停车。`--gui` 还会编译并加载只读探针，记录 Ogre 窗口实际灯色及原始采样时间到 `gui_signals.json`；`gui_traffic_pass` 必须通过才能通过总验收。GUI 探针需要本地 Gazebo 开发头文件、g++、Qt rcc 与 pkg-config。`--controlled-signals` 让左右灯分别保持红灯，检测到停车后切绿，并保存窗口像素截图。无 GUI 时，总 `lap_pass` 只核验运动和服务器灯色两项；带 GUI 时三项均须通过。实际结果与证据见 [自主巡航验收记录](reports/autonomy/2026-09-22-validation.md)。

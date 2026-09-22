@@ -17,6 +17,6 @@
   "body_length_m": 0.2,
   "body_width_m": 0.14,
   "total_mass_kg": 1.502,
-  "sensors": "Visual models and frames only; no camera or lidar data yet.",
+  "sensors": "Gazebo RGB camera, GPU lidar and IMU enabled.",
   "dimensional_basis": "Existing 0.20 m length and supplied photographs, not measured."
 }

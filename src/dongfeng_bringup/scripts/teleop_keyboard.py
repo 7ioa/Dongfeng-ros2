@@ -13,7 +13,7 @@ from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
 from geometry_msgs.msg import Twist
 
-from command_logic import KeyboardCommands, TerminalKeys
+from command_logic import KeyboardCommands, TerminalKeys, manual_publish_needed
 
 HELP = '''
 东风沙盘小车 · 键盘控制（请保持本终端焦点，英文输入法）
@@ -35,7 +35,7 @@ def main():
         float(node.declare_parameter('speed', 0.10).value),
         float(node.declare_parameter('turn', 0.65).value),
         float(node.declare_parameter('key_timeout', 0.65).value))
-    pub = node.create_publisher(Twist, '/cmd_vel', 1)
+    pub = node.create_publisher(Twist, '/cmd_vel_manual', 1)
     decoder = TerminalKeys()
     fd = sys.stdin.fileno()
     settings = termios.tcgetattr(fd)
@@ -66,19 +66,24 @@ def main():
         termios.tcflush(fd, termios.TCIFLUSH)
         tty.setcbreak(fd)
         last_status = 0.0
+        previous_velocity = (0.0, 0.0)
         while running and rclpy.ok():
+            key_received = False
             if select.select([sys.stdin], [], [], 0.05)[0]:
                 raw = os.read(fd, 64)
                 if not raw:
                     break
                 for key in decoder.feed(raw):
+                    key_received = True
                     if not control.key(key, time.monotonic()):
                         running = False
                         break
             rclpy.spin_once(node, timeout_sec=0)
             now = time.monotonic()
             velocity = control.sample(now) if running else (0.0, 0.0)
-            publish(*velocity)
+            if manual_publish_needed(velocity, previous_velocity, key_received):
+                publish(*velocity)
+            previous_velocity = velocity
             if now - last_status > 0.25:
                 print('\r线速度 %+.2f m/s  转速 %+.2f rad/s  档位 %.2f m/s   ' % (*velocity, control.speed), end='', flush=True)
                 last_status = now

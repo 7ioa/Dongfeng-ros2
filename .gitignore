@@ -39,3 +39,9 @@ Thumbs.db
 # Keep model assets (*.obj, *.mtl, *.glb), exports/, previews/, reports/,
 # and viewer/vendor/ under version control.
 # OBJ files in this project are 3D meshes, not compiler outputs.
+
+# Autonomy run artifacts stay local: per-run JSON dumps, launch logs, probe
+# data, and screenshots are evidence for one machine's debugging session, not
+# project sources. Hand-written markdown summaries remain versioned.
+/reports/autonomy/**
+!/reports/autonomy/*.md

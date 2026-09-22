@@ -6,7 +6,7 @@
   <description>
     Photo-based four-wheel robot for the Dongfeng sandbox. Includes black
     chassis, turquoise wheels, upper plate, front camera and lidar housings.
-    Camera and lidar frames are provided; sensor data simulation is not enabled.
+    Includes simulated RGB camera, GPU lidar and IMU for autonomous driving.
   </description>
   <maintainer email="course@example.invalid">Course experiment</maintainer>
   <license>Proprietary</license>

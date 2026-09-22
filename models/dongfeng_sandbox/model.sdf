@@ -432,19 +432,6 @@
         </material>
         <cast_shadows>true</cast_shadows>
       </visual>
-      <visual name="street_furniture_light_green">
-        <geometry>
-          <mesh>
-            <uri>model://dongfeng_sandbox/meshes/street_furniture_light_green.obj</uri>
-          </mesh>
-        </geometry>
-        <material>
-          <ambient>0.50196 0.76863 0.55686 1</ambient>
-          <diffuse>0.50196 0.76863 0.55686 1</diffuse>
-          <specular>0.15 0.15 0.15 1</specular>
-        </material>
-        <cast_shadows>true</cast_shadows>
-      </visual>
       <visual name="street_furniture_roof">
         <geometry>
           <mesh>
@@ -470,6 +457,342 @@
           <specular>0.15 0.15 0.15 1</specular>
         </material>
         <cast_shadows>true</cast_shadows>
+      </visual>
+      <visual name="signal_0_red">
+        <pose>0.5199999999999999 2.028 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_0_yellow">
+        <pose>0.57 2.028 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_0_green">
+        <pose>0.62 2.028 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_1_red">
+        <pose>1.282 2.1700000000000004 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_1_yellow">
+        <pose>1.282 2.22 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_1_green">
+        <pose>1.282 2.27 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_2_red">
+        <pose>2.0180000000000002 2.6599999999999997 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_2_yellow">
+        <pose>2.0180000000000002 2.61 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_2_green">
+        <pose>2.0180000000000002 2.56 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_3_red">
+        <pose>2.78 2.792 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_3_yellow">
+        <pose>2.73 2.792 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_3_green">
+        <pose>2.68 2.792 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_4_red">
+        <pose>0.5299999999999999 2.748 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_4_yellow">
+        <pose>0.58 2.748 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_4_green">
+        <pose>0.63 2.748 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_5_red">
+        <pose>2.7699999999999996 2.0719999999999996 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_5_yellow">
+        <pose>2.7199999999999998 2.0719999999999996 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_5_green">
+        <pose>2.67 2.0719999999999996 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_6_red">
+        <pose>0.185 3.392 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_6_yellow">
+        <pose>0.235 3.392 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_6_green">
+        <pose>0.285 3.392 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_7_red">
+        <pose>3.1149999999999998 3.478 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_7_yellow">
+        <pose>3.065 3.478 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+      <visual name="signal_7_green">
+        <pose>3.015 3.478 0.26 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>.012</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.025 0.025 0.025 1</ambient>
+          <diffuse>0.025 0.025 0.025 1</diffuse>
+          <emissive>0.025 0.025 0.025 1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
       </visual>
       <collision name="base">
         <geometry>

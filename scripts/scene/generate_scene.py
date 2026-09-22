@@ -57,6 +57,7 @@ class Mesh:
 
 BUCKETS=defaultdict(Mesh)
 COLLISION=defaultdict(Mesh)
+SIGNALS=[]
 def bucket(layer,mat): return BUCKETS[(layer,mat)]
 
 def signed_area(p):
@@ -1043,9 +1044,12 @@ def signal(x,y,angle):
     beam((x,y,z+h),(x+.24*dx,y+.24*dy,z+h),.005,'street_furniture','steel',None,n=8)
     cx=x+.16*dx;cy=y+.16*dy
     box(cx,cy,z+h-.024,.19,.032,.049,'street_furniture','black',None,yaw=angle)
-    for i in [-1,0,1]:
-        px=cx+dx*i*.05;py=cy+dy*i*.05
-        ellipsoid(px+dy*.018,py-dx*.018,z+h,.012,.012,.012,'street_furniture','light_green' if i==1 else 'steel',n=8,rings=4)
+    # Independent SDF visuals permit server-side material updates seen by cameras.
+    # The two perimeter heads face the approaching one-way traffic.
+    reverse = x < .1 or x > W-.1
+    side = -1 if reverse else 1
+    SIGNALS.append(dict(id=f'signal_{len(SIGNALS)}',head=[cx,cy,z+h],
+                        angle=angle,side=side,phase=13 if abs(math.sin(angle))>.5 else 0))
 
 def gantry(x):
     z=.13;y0,y1=5.025,5.39;h=.44
@@ -1129,6 +1133,9 @@ def build_furniture():
                     (1.65,4.5,math.pi/2)]:lamp(x,y,a,base_height=PARKING_Z if x>right_join_x and y>3.8 else None)
     for x,y,a in [(.41,2.05,0),(1.26,2.06,math.pi/2),(2.04,2.77,-math.pi/2),(2.89,2.77,math.pi),
                   (.42,2.77,0),(2.88,2.05,math.pi),(.075,3.37,0),(3.225,3.50,math.pi)]:signal(x,y,a)
+    # Painted stop lines for the two perimeter approaches, before the lamp heads.
+    for x,y in [(.19,3.68),(3.11,3.19)]:
+        ribbon([(x-.13,y),(x+.13,y)],.012,.002,'markings','white')
     for x in [1.0,2.3]:gantry(x)
     # Both entrances use their independently observed gate and booth positions.
     left_parking_gate()
@@ -1179,6 +1186,19 @@ def write_sdf(model_dir):
         material=ET.SubElement(visual,'material');color=' '.join(f'{a:.5f}' for a in rgb(PALETTE[mat]))+' 1'
         ET.SubElement(material,'ambient').text=color;ET.SubElement(material,'diffuse').text=color
         ET.SubElement(material,'specular').text='0.15 0.15 0.15 1';ET.SubElement(visual,'cast_shadows').text='true'
+    for signal in SIGNALS:
+        cx,cy,z=signal['head'];dx,dy=math.cos(signal['angle']),math.sin(signal['angle'])
+        for i,color in enumerate(['red','yellow','green']):
+            v=ET.SubElement(link,'visual',name=signal['id']+'_'+color)
+            ET.SubElement(v,'pose').text=f'{cx+dx*(i-1)*.05+dy*.022*signal["side"]} {cy+dy*(i-1)*.05-dx*.022*signal["side"]} {z} 0 0 0'
+            ET.SubElement(ET.SubElement(ET.SubElement(v,'geometry'),'sphere'),'radius').text='.012'
+            material=ET.SubElement(v,'material')
+            for prop in ['ambient','diffuse','emissive']:ET.SubElement(material,prop).text='0.025 0.025 0.025 1'
+            ET.SubElement(v,'cast_shadows').text='false'
+    autonomy=ROOT/'src/dongfeng_autonomy/config'
+    autonomy.mkdir(parents=True,exist_ok=True)
+    (autonomy/'signals.json').write_text(json.dumps(SIGNALS,indent=2)+'\n')
+    (autonomy/'scene.json').write_text(json.dumps(CFG,indent=2)+'\n')
     for name in COLLISION:
         co=ET.SubElement(link,'collision',name=name);geo=ET.SubElement(co,'geometry');mesh=ET.SubElement(geo,'mesh');ET.SubElement(mesh,'uri').text=f'model://dongfeng_sandbox/meshes/collision_{name}.obj'
         surf=ET.SubElement(co,'surface');fr=ET.SubElement(surf,'friction');ode=ET.SubElement(fr,'ode');ET.SubElement(ode,'mu').text='0.9';ET.SubElement(ode,'mu2').text='0.9'
@@ -1186,14 +1206,14 @@ def write_sdf(model_dir):
     (model_dir/'model.config').write_text('<?xml version="1.0"?>\n<model><name>Dongfeng sandbox</name><version>1.0</version><sdf version="1.9">model.sdf</sdf><author><name>Course experiment</name></author><description>Measured 3.3 x 5.4 m sandbox; buildings and layout approximated from supplied photos.</description></model>\n',encoding='utf-8')
     world=ET.Element('sdf',version='1.9');w=ET.SubElement(world,'world',name='dongfeng_world');ET.SubElement(w,'gravity').text='0 0 -9.81'
     physics=ET.SubElement(w,'physics',name='physics',type='ignored');ET.SubElement(physics,'max_step_size').text='0.001';ET.SubElement(physics,'real_time_factor').text='1'
-    for filename,name in [('physics','Physics'),('user-commands','UserCommands'),('scene-broadcaster','SceneBroadcaster'),('sensors','Sensors')]:
+    for filename,name in [('physics','Physics'),('imu','Imu'),('user-commands','UserCommands'),('scene-broadcaster','SceneBroadcaster'),('sensors','Sensors')]:
         plug=ET.SubElement(w,'plugin',filename=f'gz-sim-{filename}-system',name=f'gz::sim::systems::{name}')
         if filename=='sensors':ET.SubElement(plug,'render_engine').text='ogre2'
     scene=ET.SubElement(w,'scene');ET.SubElement(scene,'ambient').text='0.65 0.65 0.65 1';ET.SubElement(scene,'background').text='0.88 0.9 0.92 1';ET.SubElement(scene,'shadows').text='true'
     sun=ET.SubElement(w,'light',name='sun',type='directional');ET.SubElement(sun,'pose').text='0 0 10 0 0 0';ET.SubElement(sun,'diffuse').text='0.85 0.85 0.85 1';ET.SubElement(sun,'specular').text='0.15 0.15 0.15 1';ET.SubElement(sun,'direction').text='-0.5 0.3 -0.9';ET.SubElement(sun,'cast_shadows').text='true'
     inc=ET.SubElement(w,'include');ET.SubElement(inc,'uri').text='model://dongfeng_sandbox'
     gui=ET.SubElement(w,'gui',fullscreen='0');view=ET.SubElement(gui,'plugin',filename='MinimalScene',name='3D View')
-    ET.SubElement(view,'engine').text='ogre2';ET.SubElement(view,'scene').text='scene';ET.SubElement(view,'camera_pose').text='4 -5 6 0 0.60 1.28'
+    ET.SubElement(view,'engine').text='ogre';ET.SubElement(view,'scene').text='scene';ET.SubElement(view,'camera_pose').text='4 -5 6 0 0.60 1.28'
     ET.SubElement(gui,'plugin',filename='GzSceneManager',name='Scene Manager');ET.SubElement(gui,'plugin',filename='InteractiveViewControl',name='Interactive view control');ET.SubElement(gui,'plugin',filename='EntityTree',name='Entity tree');ET.SubElement(gui,'plugin',filename='ComponentInspector',name='Component inspector')
     control=ET.SubElement(gui,'plugin',filename='WorldControl',name='World control');ET.SubElement(control,'play_pause').text='true';ET.SubElement(control,'start_paused').text='false';ET.SubElement(control,'service').text='/world/dongfeng_world/control';ET.SubElement(control,'stats_topic').text='/world/dongfeng_world/stats'
     ET.indent(world);ET.ElementTree(world).write(ROOT/'worlds'/'dongfeng.sdf',encoding='utf-8',xml_declaration=True)

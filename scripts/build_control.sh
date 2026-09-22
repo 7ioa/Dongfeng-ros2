@@ -6,11 +6,12 @@ if ! command -v colcon >/dev/null 2>&1; then
   exit 1
 fi
 cd "$DONGFENG_ROOT"
+python3 "$DONGFENG_ROOT/scripts/autonomy/build_landmarks.py" --if-needed
 # Separate portable build; do not reuse a companion's absolute CMake paths.
 # Clean the CMake cache on each build in case the whole folder has been moved.
 colcon --log-base "$DONGFENG_ROOT/log_control" build \
   --base-paths "$DONGFENG_ROOT/src" \
   --build-base "$DONGFENG_ROOT/build_control" \
   --install-base "$DONGFENG_ROOT/install_control" \
-  --packages-select dongfeng_description dongfeng_bringup \
+  --packages-select dongfeng_description dongfeng_bringup dongfeng_autonomy \
   --cmake-clean-cache --cmake-args -DBUILD_TESTING=OFF

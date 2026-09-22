@@ -34,7 +34,7 @@ import xml.etree.ElementTree as ET
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
-                            OpaqueFunction, SetEnvironmentVariable,
+                            OpaqueFunction, SetEnvironmentVariable, GroupAction,
                             RegisterEventHandler, EmitEvent, LogInfo)
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
@@ -78,14 +78,39 @@ def _launch_setup(context, *args, **kwargs):
 
     # Gazebo command line. Flags first, world file last.
     gz_args = []
-    if flag('headless'):
+    software_sensors=flag('sensor_software_rendering')
+    if flag('headless') or software_sensors:
         gz_args.append('-s')
+    if flag('headless_rendering'):
+        if software_sensors or os.environ.get('LIBGL_ALWAYS_SOFTWARE') == '1':
+            raise RuntimeError('软件渲染请使用 headless:=true，不要设置 headless_rendering:=true；EGL 会强制选择硬件设备。')
+        gz_args.append('--headless-rendering')
     gz_args.append('-r')
     if value('render_engine').strip():
         gz_args += ['--render-engine', value('render_engine').strip()]
+    gz_args += ['--render-engine-server', value('sensor_render_engine')]
+    if value('gui_config'):
+        gz_args += ['--gui-config',value('gui_config')]
     if flag('verbose'):
         gz_args += ['-v', '4']
     gz_args.append(world)
+
+    gz_launch=PythonLaunchDescriptionSource(os.path.join(
+        get_package_share_directory('ros_gz_sim'),'launch','gz_sim.launch.py'))
+    server=IncludeLaunchDescription(gz_launch,
+        launch_arguments={'gz_args':shlex.join(gz_args),'on_exit_shutdown':'true'}.items())
+    gazebo_actions=[server]
+    if software_sensors:
+        # Mesa is needed for sensor images on VMware, but must not slow down
+        # the visible scene. Keep the GUI environment identical to launch_car.sh.
+        gazebo_actions=[GroupAction(actions=[
+            SetEnvironmentVariable('LIBGL_ALWAYS_SOFTWARE','1'),server])]
+        if not flag('headless'):
+            gui_args=['-g','--render-engine',value('render_engine')]
+            if value('gui_config'):gui_args+=['--gui-config',value('gui_config')]
+            gazebo_actions.append(GroupAction(actions=[IncludeLaunchDescription(
+                gz_launch,launch_arguments={'gz_args':shlex.join(gui_args),
+                    'on_exit_shutdown':'true'}.items())]))
 
     use_sim_time = flag('use_sim_time')
     robot_name = value('robot_name')
@@ -106,6 +131,10 @@ def _launch_setup(context, *args, **kwargs):
         name='command_guard', output='screen',
         parameters=[{'use_sim_time': use_sim_time,
                      'command_timeout': float(value('command_timeout'))}])
+    arbiter = Node(package='dongfeng_autonomy', executable='arbiter_node',
+                   name='command_arbiter', output='screen',
+                   parameters=[{'use_sim_time': use_sim_time,
+                                'start_enabled': flag('auto_mode')}])
 
     spawn = Node(
         package='ros_gz_sim', executable='create', name='spawn_dongfeng_car',
@@ -127,13 +156,11 @@ def _launch_setup(context, *args, **kwargs):
 
         RegisterEventHandler(OnProcessExit(target_action=guard,
             on_exit=[EmitEvent(event=Shutdown(reason='Command guard stopped.'))])),
+        RegisterEventHandler(OnProcessExit(target_action=arbiter,
+            on_exit=[EmitEvent(event=Shutdown(reason='Command arbiter stopped.'))])),
         RegisterEventHandler(OnProcessExit(target_action=spawn, on_exit=spawned)),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-                get_package_share_directory('ros_gz_sim'), 'launch',
-                'gz_sim.launch.py')),
-            launch_arguments=[('gz_args', shlex.join(gz_args))]),
+        *gazebo_actions,
 
         Node(
             package='robot_state_publisher',
@@ -151,6 +178,7 @@ def _launch_setup(context, *args, **kwargs):
         # Waits for this world's create service and robot_description topic.
         spawn,
         guard,
+        arbiter,
 
         Node(
             package='ros_gz_bridge',
@@ -183,6 +211,9 @@ def generate_launch_description():
     }
 
     return LaunchDescription([
+        DeclareLaunchArgument('gui_config',default_value='',description='Optional GUI configuration for validation.'),
+        DeclareLaunchArgument('auto_mode', default_value='false',
+                              description='Enable automatic input at startup.'),
         DeclareLaunchArgument(
             'world', default_value=str(scene_root / 'worlds' / 'dongfeng.sdf'),
             description='Sandbox world file to load.'),
@@ -210,9 +241,18 @@ def generate_launch_description():
             description="Gazebo render engine. Leave empty for the world's own "
                         "setting, or use 'ogre' on VMware guests."),
         DeclareLaunchArgument(
+            'sensor_software_rendering', default_value='false',
+            description='Use Mesa for server sensors only; preserve GUI rendering.'),
+        DeclareLaunchArgument(
+            'sensor_render_engine', default_value='ogre2',
+            description='Server rendering for camera and GPU lidar.'),
+        DeclareLaunchArgument(
             'headless', default_value='false',
             description='Run the Gazebo server only, without a GUI (for '
                         'scripted tests).'),
+        DeclareLaunchArgument(
+            'headless_rendering', default_value='false',
+            description='Use EGL rendering for sensors without a display (Ogre2).'),
         DeclareLaunchArgument(
             'verbose', default_value='false',
             description='Raise the Gazebo log level to 4.'),

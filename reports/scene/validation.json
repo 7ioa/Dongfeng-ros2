@@ -33,11 +33,11 @@
   "closing_segment_length_m": 0.01570758104346278,
   "closing_segment_note": "The final section is connected to the first by mesh faces; this is a segment length, not a gap.",
   "road_cross_sections": 764,
-  "visual_mesh_groups": 36,
-  "visual_triangles": 119800,
+  "visual_mesh_groups": 35,
+  "visual_triangles": 118652,
   "trees": 210,
   "collision_triangles": 53600,
   "gazebo_runtime_test": "Not run: this generator performs static geometry checks only.",
   "sdf_xml_and_asset_references": "passed",
-  "resolved_references": 46
+  "resolved_references": 45
 }

@@ -7,6 +7,7 @@
       <real_time_factor>1</real_time_factor>
     </physics>
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
@@ -29,7 +30,7 @@
     </include>
     <gui fullscreen="0">
       <plugin filename="MinimalScene" name="3D View">
-        <engine>ogre2</engine>
+        <engine>ogre</engine>
         <scene>scene</scene>
         <camera_pose>4 -5 6 0 0.60 1.28</camera_pose>
       </plugin>
