@@ -9,7 +9,7 @@ class LandmarkMap:
         self.normals=np.asarray(normals,dtype=float)
         self.tree=cKDTree(self.points)
 
-    def correction(self, endpoints):
+    def correction(self, endpoints, tracking=False):
         p=np.asarray(endpoints,dtype=float)
         if len(p)<15 or not np.isfinite(p).all():return np.zeros(2),False
         # Seed ICP with a bounded translation search. Curbs and repeated small
@@ -18,6 +18,7 @@ class LandmarkMap:
                           for y in np.linspace(-.06,.06,7)])
         distance,_=self.tree.query((p[None,:,:]+offsets[:,None,:]).reshape(-1,3))
         scores=np.mean(np.minimum(distance.reshape(len(offsets),len(p)),.05)**2,axis=1)
+        if tracking:scores+=.3*np.sum(offsets**2,axis=1)
         seed=offsets[int(np.argmin(scores))]
         p=p+seed;total=seed[:2].copy()
         for _ in range(5):
@@ -30,11 +31,25 @@ class LandmarkMap:
             weights=1./(1.+(residual/.005)**2)
             matrix=a.T@(weights[:,None]*a)
             if np.linalg.eigvalsh(matrix)[0]<.1:return np.zeros(2),False
-            delta=np.linalg.solve(matrix+np.eye(2)*.01,-a.T@(weights*residual))
+            # During tracking, wheel/IMU prediction is a prior. Repeated rails
+            # at crests must not pull a good prediction into a distant minimum.
+            prior=2. if tracking else .01
+            delta=np.linalg.solve(matrix+np.eye(2)*prior,-a.T@(weights*residual)-prior*total)
             delta=np.clip(delta,-.04,.04)
             p=p.copy();p[:,:2]+=delta;total+=delta
             if np.linalg.norm(delta)<.0003:break
         return total,True
+
+
+def consistent_correction(delta, pose, route, progress, limit=.035):
+    """Reject ICP innovations inconsistent with odometry and the mapped corridor.
+
+    This is a rejection gate, never a snap to the route or simulator position.
+    """
+    if not np.isfinite(delta).all() or np.linalg.norm(delta)>limit:return False
+    _,before=route.project(*pose[:2],progress)
+    _,after=route.project(*(pose[:2]+delta),progress)
+    return abs(after)<=max(.028,abs(before)+.012)
 
 
 def rotation(roll,pitch,yaw):

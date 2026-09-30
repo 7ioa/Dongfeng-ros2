@@ -4,6 +4,28 @@ import numpy as np
 from .route import wrap
 
 
+def evaluate_mission(truth,complete,mission):
+    """Truth progress is produced by a separate, ordered Mission tracker."""
+    if len(truth)<2:return dict(lap_pass=False,trajectory_valid=False)
+    data=np.array([[p[k] for k in ('t','x','y','yaw','progress')] for p in truth])
+    dt=np.diff(data[:,0]);ds=np.linalg.norm(np.diff(data[:,1:3],axis=0),axis=1)
+    valid=bool(np.isfinite(data).all() and np.all((dt>0)&(dt<.6)) and np.all(ds<=.3*dt+.005))
+    indices=[p['segment_index'] for p in truth]
+    visits=list(dict.fromkeys(indices))
+    corridor=all(abs(p['error'])<=mission.segments[p['segment_index']].corridor for p in truth)
+    distance=math.dist(data[-1,1:3],mission.target(0));heading=abs(wrap(data[-1,3]))
+    stationary=0.
+    for i in range(len(truth)-2,-1,-1):
+        if np.linalg.norm(data[i,1:3]-data[-1,1:3])>.005 or abs(wrap(data[i,3]-data[-1,3]))>math.radians(3):break
+        stationary=data[-1,0]-data[i,0]
+    passed=bool(complete and valid and visits==list(range(len(mission.segments))) and corridor
+                and distance<.08 and heading<math.radians(15) and stationary>=2.
+                and data[0,4]<.08 and data[-1,4]>mission.length-.08)
+    return dict(lap_pass=passed,trajectory_valid=valid,route_corridor_pass=corridor,
+                return_distance=distance,return_heading_error=heading,stationary_seconds=stationary,
+                truth_progress=float(data[-1,4]),visited_segments=[mission.segments[i].name for i in visits])
+
+
 def evaluate_lap(truth, complete, route):
     result = dict(complete=bool(complete), lap_pass=False, checkpoints=[],
                   trajectory_valid=False, road_containment_pass=False,
@@ -71,7 +93,7 @@ def evaluate_signals(truth, lamps, signals, route):
         return dict(traffic_pass=False,signal_crossings=[],red_stops=[])
     times=np.array([m['t'] for m in lamps])
     positions=np.array([[p['x'],p['y']] for p in truth])
-    progress=np.array([route.project(*p)[0] for p in positions])
+    progress=np.array([p['progress'] for p in truth]) if hasattr(route,'segments') else np.array([route.project(*p)[0] for p in positions])
     for sig in signals:
         colors=[]
         for p in truth:

@@ -8,11 +8,13 @@ def wrap(a):
 
 
 class Route:
-    def __init__(self, points):
-        self.points = np.asarray(points, dtype=float)[:, :2]
-        if self.points.ndim != 2 or len(self.points) < 4 or not np.isfinite(self.points).all():
+    def __init__(self, points, closed=True):
+        self.points = np.asarray(points, dtype=float)
+        if self.points.ndim != 2 or self.points.shape[1] != 2 or len(self.points) < 2 or not np.isfinite(self.points).all():
             raise ValueError('Route needs finite 2D points')
-        self.delta = np.roll(self.points, -1, axis=0) - self.points
+        self.closed = closed
+        self.starts = self.points if closed else self.points[:-1]
+        self.delta = (np.roll(self.points, -1, axis=0) if closed else self.points[1:]) - self.starts
         self.ds = np.linalg.norm(self.delta, axis=1)
         if np.any(self.ds < 1e-8):
             raise ValueError('Duplicate route points')
@@ -39,19 +41,26 @@ class Route:
         return cls(pts)
 
     def target(self, progress):
-        s = progress % self.length
-        i = min(np.searchsorted(self.s,s,side='right')-1,len(self.points)-1)
-        return self.points[i]+self.delta[i]*(s-self.s[i])/self.ds[i]
+        s = progress % self.length if self.closed else np.clip(progress, 0., self.length)
+        i = min(np.searchsorted(self.s,s,side='right')-1,len(self.delta)-1)
+        return self.starts[i]+self.delta[i]*(s-self.s[i])/self.ds[i]
+
+    def heading(self, progress):
+        a, b = self.target(max(0., progress-.005)), self.target(min(self.length-.000001, progress+.005))
+        return math.atan2(b[1]-a[1], b[0]-a[0])
 
     def project(self, x, y, previous=None):
         p=np.array([x,y])
-        t=np.clip(np.sum((p-self.points)*self.delta,axis=1)/self.ds**2,0,1)
-        closest=self.points+t[:,None]*self.delta
+        t=np.clip(np.sum((p-self.starts)*self.delta,axis=1)/self.ds**2,0,1)
+        closest=self.starts+t[:,None]*self.delta
         dist=np.linalg.norm(closest-p,axis=1)
         progress=self.s[:-1]+t*self.ds
         if previous is not None:
-            progress += np.round((previous-progress)/self.length)*self.length
+            if self.closed:progress += np.round((previous-progress)/self.length)*self.length
             dist=np.where((progress>=previous-.15)&(progress<=previous+.6),dist,np.inf)
+        if not np.isfinite(dist).any():return float(previous or 0.), math.inf
         i=int(np.argmin(dist))
-        signed=np.cross(self.delta[i]/self.ds[i],p-closest[i]).item()
+        cross=self.delta[i,0]*(p-closest[i])[1]-self.delta[i,1]*(p-closest[i])[0]
+        # Euclidean distance also detects overshooting an open endpoint.
+        signed=math.copysign(float(dist[i]), cross)
         return float(progress[i]),float(signed)

@@ -10,15 +10,17 @@ from rclpy.node import Node
 from rclpy.clock import Clock, ClockType
 from rclpy.qos import qos_profile_sensor_data
 from geometry_msgs.msg import Twist, TransformStamped
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, OccupancyGrid
 from sensor_msgs.msg import Image, LaserScan, Imu, CameraInfo
 from std_msgs.msg import String, Bool
 from tf2_ros import TransformBroadcaster
 from ament_index_python.packages import get_package_share_directory
 from .route import Route, wrap
+from .mission import Mission
+from .mapping import ParkingMapper, outside_robot
 from .control import Driver, Observation, obstacle_distance, YawController
 from .vision import detect_lane, detect_light, signal_roi, detect_stop_line
-from .localization import LandmarkMap, rotation
+from .localization import LandmarkMap, rotation, consistent_correction
 from .sensing import Freshness, orientation_rpy
 
 
@@ -36,6 +38,8 @@ class Autonomy(Node):
         cfg=json.loads((root/'scene.json').read_text());self.cfg=cfg
         self.route=Route.perimeter(cfg['interior_width'],cfg['interior_length'],cfg['road_edge_inset_assumed'],cfg['outer_road_radius'],cfg['one_way_width'])
         signals=json.loads((root/'signals.json').read_text())
+        mode=str(self.declare_parameter('mission','full_demo').value)
+        if mode not in ('perimeter','full_demo'):raise ValueError('mission must be perimeter or full_demo')
         self.signals=[]
         for sig in signals:
             if sig['id'] in ('signal_6','signal_7'):
@@ -44,16 +48,24 @@ class Autonomy(Node):
                 sig['line_s']=self.route.project(x,y)[0]
                 sig['stop_s']=sig['line_s']-.1032-.035
                 self.signals.append(sig)
-        self.driver=Driver(self.route,self.signals,float(self.declare_parameter('speed',.15).value))
+        if mode=='full_demo':
+            self.route=Mission.load(root/'full_demo.json',signals)
+            self.signals=self.route.signals
+        self.driver=Driver(self.route,self.signals,float(self.declare_parameter('speed',.20).value))
         self.pose=np.array([1.65,.19,0.]);self.pitch=0.;self.roll=0.
         self.yaw_rate=0.;self.yaw_controller=YawController();self.control_time=None
         self.prev_odom=None;self.imu_ready=False
+        self.sensor_faults=set()
         self.observation=Observation(fresh=False,lane_valid=False)
-        self.freshness=Freshness(('image','scan','imu','odom','info','localization'),.4)
+        self.freshness=Freshness(('image','scan','imu','odom','info','localization'),.5,{'localization':1.5,'info':2.})
         self.received=self.freshness.received;self.source_stamp=self.freshness.stamps;self.frame=0
         data=np.load(root/'landmarks.npz')
         self.landmarks=LandmarkMap(data['points'],data['normals']);self.road=data['road']
         self.ground_height=0.;self.localization_good=False;self.path_curvature=0.
+        self.localization_delta=[0.,0.];self.localization_rejected=0;self.measured_speed=0.
+        self.mapper=ParkingMapper();self.map_pub=self.create_publisher(OccupancyGrid,'/autonomy/parking_map',1)
+        self.map_output=str(self.declare_parameter('map_output','reports/autonomy/parking_map').value)
+        self.last_map=0.;self.map_saved=False
         self.ranges=None;self.angles=None;self.last_command=(0.,0.)
         self.camera_k=(254.,254.,320.,240.)
         self.debug=bool(self.declare_parameter('debug_images',True).value)
@@ -78,13 +90,18 @@ class Autonomy(Node):
         return self.freshness.update(key,stamp,time.monotonic())
 
     def info(self,m):
+        if not all(math.isfinite(v) for v in m.k) or m.k[0]<=0 or m.k[4]<=0:
+            self.sensor_faults.add('info');return
+        self.sensor_faults.discard('info')
         self.camera_k=(m.k[0],m.k[4],m.k[2],m.k[5]);self.mark('info',m)
 
     def odom(self,m):
         q=m.pose.pose.orientation
         orientation=orientation_rpy((q.x,q.y,q.z,q.w))
         p=m.pose.pose.position
-        if orientation is None or not all(math.isfinite(v) for v in (p.x,p.y)):return
+        if orientation is None or not all(math.isfinite(v) for v in (p.x,p.y,m.twist.twist.linear.x)):
+            self.sensor_faults.add('odom');return
+        self.sensor_faults.discard('odom')
         if not self.mark('odom',m):return
         oyaw=orientation[2]
         current=np.array([p.x,p.y,oyaw])
@@ -94,11 +111,14 @@ class Autonomy(Node):
             if abs(forward)<.05:
                 self.pose[:2]+=forward*np.array([math.cos(self.pose[2]),math.sin(self.pose[2])])
         self.prev_odom=current
+        self.measured_speed=float(m.twist.twist.linear.x)
 
     def imu(self,m):
         q=m.orientation
         orientation=orientation_rpy((q.x,q.y,q.z,q.w),available=m.orientation_covariance[0]!=-1)
-        if orientation is None or not math.isfinite(m.angular_velocity.z):return
+        if orientation is None or not math.isfinite(m.angular_velocity.z):
+            self.sensor_faults.add('imu');return
+        self.sensor_faults.discard('imu')
         if not self.mark('imu',m):return
         self.roll,self.pitch,self.pose[2]=orientation
         self.yaw_rate=m.angular_velocity.z
@@ -111,21 +131,43 @@ class Autonomy(Node):
         # Match actual range endpoints against known static scene surfaces.
         if not self.imu_ready:return
         nearest=int(np.argmin(np.linalg.norm(self.road[:,:2]-self.pose[:2],axis=1)))
-        self.ground_height=float(self.road[nearest,2])
+        seg=self.driver.segment
+        self.ground_height=float(self.road[nearest,2]) if seg is None or seg.surface=='perimeter' else (.002 if seg.surface=='yard' else 0.)
+        if not self.enabled:
+            # A manual drive may cross a segment boundary before the mission is
+            # explicitly resumed. Do not keep the old segment's road height.
+            self.ground_height=float(self.road[nearest,2]) if np.linalg.norm(self.road[nearest,:2]-self.pose[:2])<.155 else 0.
         good=np.isfinite(self.ranges)&(self.ranges>=.04)&(self.ranges<4.8)
         indices=np.flatnonzero(good)[::2]
         ranges=self.ranges[indices];angles=self.angles[indices]
         local=np.c_[ranges*np.cos(angles)+.075,ranges*np.sin(angles),np.full(len(indices),.065)]
         world=local@rotation(self.roll,self.pitch,self.pose[2]).T
         world+=np.array([*self.pose[:2],self.ground_height+.028])
-        delta,valid=self.landmarks.correction(world)
-        self.localization_good=bool(valid and np.linalg.norm(delta)<.15)
+        delta,valid=self.landmarks.correction(world,tracking=True)
+        self.localization_delta=delta.tolist()
+        self.localization_good=bool(valid and consistent_correction(delta,self.pose,self.route,self.driver.progress))
+        parking=seg is not None and seg.kind=='parking'
+        if parking:
+            external=outside_robot(local)
+            local_delta,local_valid=self.mapper.correction(world[external])
+            local_valid=bool(local_valid and consistent_correction(local_delta,self.pose,self.route,self.driver.progress,limit=.025))
+            if local_valid:
+                if self.localization_good:
+                    if np.linalg.norm(local_delta-delta)<.03:delta=.7*delta+.3*local_delta
+                else:delta=local_delta;self.localization_good=True
         if self.localization_good:
             self.pose[:2]+=delta*.7
+            world[:,:2]+=delta*.7
             self.mark('localization',m)
+        else:self.localization_rejected+=1
+        if parking and self.localization_good:
+            sensor_origin=self.pose[:2]+(rotation(self.roll,self.pitch,self.pose[2])@np.array([.075,0.,.065]))[:2]
+            self.mapper.update(sensor_origin,world[external])
 
     def image(self,m):
-        if m.encoding not in ('rgb8','bgr8') or m.step<m.width*3 or len(m.data)!=m.height*m.step:return
+        if m.encoding not in ('rgb8','bgr8') or not m.width or not m.height or m.step<m.width*3 or len(m.data)!=m.height*m.step:
+            self.sensor_faults.add('image');return
+        self.sensor_faults.discard('image')
         if not self.mark('image',m):return
         frame=np.frombuffer(m.data,np.uint8).reshape(m.height,m.step)[:,:m.width*3].reshape(m.height,m.width,3)
         if m.encoding=='rgb8':frame=cv2.cvtColor(frame,cv2.COLOR_RGB2BGR)
@@ -155,21 +197,25 @@ class Autonomy(Node):
         wall=time.monotonic();now=self.get_clock().now().nanoseconds/1e9
         ages={k:wall-self.received.get(k,-math.inf) for k in self.freshness.required}
         source_ages={k:now-self.source_stamp.get(k,-math.inf) for k in ages}
-        self.observation.fresh=self.freshness.ready(now,wall)
+        self.observation.fresh=self.freshness.ready(now,wall) and not self.sensor_faults
         self.observation.pitch=self.pitch
+        self.observation.localization_age=max(ages['localization'],source_ages['localization'])
+        self.observation.measured_speed=self.measured_speed
         if self.ranges is not None and self.observation.fresh and self.enabled:
-            v,w=self.last_command
+            self.path_curvature=self.driver.tracking_curvature(self.pose)
             self.observation.clearance=obstacle_distance(self.ranges,self.angles,self.path_curvature)
         command=self.driver.step(self.pose,self.observation,now,enabled=self.enabled)
-        self.path_curvature=command[1]/max(.03,command[0])
         dt=0. if self.control_time is None else now-self.control_time
         self.control_time=now
         command=(command[0],self.yaw_controller.step(command[1],self.yaw_rate,dt,stopped=command[0]==0.))
+        if self.driver.progress<self.last_progress-.05:
+            self.last_progress=self.driver.progress;self.progress_time=wall
         if self.driver.progress-self.last_progress>.01:
             self.last_progress=self.driver.progress;self.progress_time=wall
-        if self.driver.state in ('DRIVE','CROSSING') and wall-self.progress_time>15:
+        moving_states=('DRIVE','CROSSING','ROUNDABOUT','PARKING_AREA','SLOPE','APPROACH_SIGNAL')
+        if self.driver.state in moving_states and command[0]>.025 and wall-self.progress_time>15:
             command=self.driver.stop('FAULT_STOP','no progress for 15 seconds')
-        elif self.driver.state not in ('DRIVE','CROSSING'):self.progress_time=wall
+        elif self.driver.state not in moving_states:self.progress_time=wall
         if self.prev_odom is not None:
             yaw=wrap(self.pose[2]-self.prev_odom[2]);c,s=math.cos(yaw),math.sin(yaw)
             xy=self.pose[:2]-np.array([[c,-s],[s,c]])@self.prev_odom[:2]
@@ -181,9 +227,22 @@ class Autonomy(Node):
             command=(0.,0.);self.yaw_controller.integral=0.
             self.progress_time=wall
         msg=Twist();msg.linear.x,msg.angular.z=command;self.pub.publish(msg)
+        if self.mapper.scans and wall-self.last_map>1.:
+            self.last_map=wall
+            grid=OccupancyGrid();grid.header.stamp=self.get_clock().now().to_msg();grid.header.frame_id='map'
+            grid.info.resolution=self.mapper.resolution;grid.info.width=132;grid.info.height=72
+            grid.info.origin.position.y=3.5;grid.info.origin.orientation.w=1.
+            grid.data=self.mapper.occupancy().ravel().tolist();self.map_pub.publish(grid)
+        if self.driver.state=='COMPLETE' and not self.map_saved:
+            self.map_saved=True
+            if self.mapper.scans:self.mapper.save(self.map_output)
+            self.get_logger().info('MISSION COMPLETE')
         if wall-self.last_report>.25:
             self.last_report=wall
             data=dict(state=self.driver.state,reason=self.driver.reason,progress=round(self.driver.progress,3),length=round(self.route.length,3),pose=self.pose.tolist(),pitch=self.pitch,localized=self.localization_good,lane_valid=self.observation.lane_valid,lane_error=self.observation.lane_error,light=self.observation.light,signal=self.observation.light_id,clearance=self.observation.clearance if math.isfinite(self.observation.clearance) else None,ages={k:v if math.isfinite(v) else None for k,v in ages.items()},command=command,sim_time=now,frame=self.frame,stop_distance=self.observation.stop_distance)
+            data.update(self.route.status(self.driver.progress) if isinstance(self.route,Mission) else dict(mission='perimeter',segment='perimeter',segment_index=0,segment_progress=self.driver.progress,mission_progress=self.driver.progress/self.route.length))
+            if self.driver.state=='COMPLETE':data['mission_progress']=1.
+            data.update(localization_delta=self.localization_delta,localization_rejected=self.localization_rejected,measured_speed=self.measured_speed,mapping_scans=self.mapper.scans,mapping_matches=self.mapper.matches,green_frames=self.driver.green_frames,committed=self.driver.committed,expected_signal=self.driver.signals[self.driver.signal_index]['id'] if self.driver.signal_index<len(self.driver.signals) else '')
             self.status_pub.publish(String(data=json.dumps(data,allow_nan=False)))
 
 
@@ -192,6 +251,7 @@ def main():
     try:rclpy.spin(n)
     except (KeyboardInterrupt,rclpy.executors.ExternalShutdownException):pass
     finally:
+        if n.mapper.scans and not n.map_saved:n.mapper.save(n.map_output)
         if rclpy.ok():n.pub.publish(Twist())
         n.destroy_node()
         if rclpy.ok():rclpy.shutdown()

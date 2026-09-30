@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import subprocess
 import time
+import copy
 from google.protobuf import text_format
 
 import rclpy
@@ -24,6 +25,10 @@ from gz.msgs10.pose_v_pb2 import Pose_V
 from gz.msgs10.world_control_pb2 import WorldControl
 from dongfeng_autonomy.route import Route
 
+# End-to-end observation budget: sensor age (0.50), driver tick (0.05),
+# arbiter (0.02), guard (0.02), and DDS/evaluator scheduling (0.03) seconds.
+# Node freshness and command timeout values are unchanged by this tester.
+STOP_DEADLINE=.62
 
 def main():
     parser=argparse.ArgumentParser()
@@ -34,18 +39,22 @@ def main():
     root=Path(args.output);root.mkdir(parents=True,exist_ok=True)
     os.environ.update(ROS_DOMAIN_ID=str(args.domain),GZ_PARTITION=f'dongfeng_faults_{args.domain}',QT_QPA_PLATFORM='xcb')
     log=(root/'launch.log').open('w')
-    process=subprocess.Popen(['bash',str(Path(__file__).resolve().parents[2]/'launch_car.sh'),'--autonomy','headless:=true',f'speed:={args.speed}','image_topic:=/fault_test/image','scan_topic:=/fault_test/scan'],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+    process=subprocess.Popen(['bash',str(Path(__file__).resolve().parents[2]/'launch_car.sh'),'--autonomy','headless:=true','mission:=perimeter',f'speed:={args.speed}','image_topic:=/fault_test/image','scan_topic:=/fault_test/scan'],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
     rclpy.init();node=rclpy.create_node('fault_evaluator');gz=GzNode()
-    states=[];commands=[];truth=[];results=[];gate={'image':'live','scan':'live'};last={}
+    states=[];commands=[];upstream=[];truth=[];results=[];gate={'image':'live','scan':'live'};last={}
     image_pub=node.create_publisher(Image,'/fault_test/image',qos_profile_sensor_data)
     scan_pub=node.create_publisher(LaserScan,'/fault_test/scan',qos_profile_sensor_data)
     def forward(key,publisher,message):
         if gate[key]=='live':last[key]=message;publisher.publish(message)
         elif gate[key]=='stale' and key in last:publisher.publish(last[key])
+        elif gate[key]=='invalid':
+            bad=copy.deepcopy(message);bad.ranges=[math.nan]*len(bad.ranges);publisher.publish(bad)
     node.create_subscription(Image,'/camera/image_raw',lambda m:forward('image',image_pub,m),qos_profile_sensor_data)
     node.create_subscription(LaserScan,'/scan',lambda m:forward('scan',scan_pub,m),qos_profile_sensor_data)
     node.create_subscription(String,'/autonomy/status',lambda m:states.append(dict(json.loads(m.data),wall=time.monotonic())),10)
     node.create_subscription(Twist,'/cmd_vel_safe',lambda m:commands.append(dict(wall=time.monotonic(),v=m.linear.x,w=m.angular.z)),10)
+    for topic in ('/cmd_vel_auto','/cmd_vel'):
+        node.create_subscription(Twist,topic,lambda m,topic=topic:upstream.append(dict(topic=topic,wall=time.monotonic(),v=m.linear.x,w=m.angular.z)),10)
     manual=node.create_publisher(Twist,'/cmd_vel_manual',1)
     enable=node.create_client(SetBool,'/autonomy/enable')
     def poses(msg):
@@ -86,8 +95,8 @@ def main():
         stop=stopped_since(start);delay=stop['wall']-start if stop else None
         displacement=math.hypot(truth[-1]['x']-origin['x'],truth[-1]['y']-origin['y'])
         stable=all(abs(c['v'])<1e-6 for c in commands if c['wall']>start+.65)
-        # A 50 ms watchdog period gives the 0.5 s timeout up to one tick to fire.
-        record(key+'_'+mode,stop is not None and delay<=.56 and stable,stop_delay=delay,distance=displacement)
+        stages={topic:next((c['wall']-start for c in upstream if c['wall']>=start and c['topic']==topic and abs(c['v'])<1e-6 and abs(c['w'])<1e-6),None) for topic in ('/cmd_vel_auto','/cmd_vel')}
+        record(key+'_'+mode,stop is not None and delay<=STOP_DEADLINE and stable,stop_delay=delay,deadline=STOP_DEADLINE,distance=displacement,upstream_delays=stages)
         gate[key]='live';record(key+'_'+mode+'_recovery',spin(10,moving))
     try:
         if not spin(35,moving):raise RuntimeError('Simulation did not become ready')
@@ -95,8 +104,20 @@ def main():
             for mode in ('drop','stale'):sensor_fault(key,mode)
         start=time.monotonic();manual.publish(Twist());spin(1.)
         record('manual_stop_latches',stopped_since(start) is not None and not moving() and states[-1]['state']=='MANUAL')
+        origin=truth[-1];reverse=Twist();reverse.linear.x=-.10
+        reverse_start=time.monotonic()
+        while time.monotonic()-reverse_start<12 and math.hypot(truth[-1]['x']-origin['x'],truth[-1]['y']-origin['y'])<.24:
+            manual.publish(reverse);spin(.12)
+        manual.publish(Twist());spin(.6)
+        record('manual_reverse_outside_old_window',math.hypot(truth[-1]['x']-origin['x'],truth[-1]['y']-origin['y'])>.18 and states[-1]['state']=='MANUAL')
         request=SetBool.Request();request.data=True;future=enable.call_async(request)
         spin(3,lambda:future.done());record('manual_reenable',future.done() and future.result().success and spin(10,moving))
+        gate['scan']='invalid';spin(1.)
+        record('invalid_lidar_stops',bool(states and states[-1]['state']=='FAULT_STOP' and commands[-1]['v']==0))
+        gate['scan']='live';spin(.7)
+        request=SetBool.Request();request.data=False;future=enable.call_async(request);spin(2,lambda:future.done());spin(.3)
+        request=SetBool.Request();request.data=True;future=enable.call_async(request);spin(2,lambda:future.done())
+        record('invalid_lidar_explicit_recovery',spin(10,moving))
         # Place a real collision and visible obstacle on the local forward path.
         p=truth[-1];x=p['x']+.26*math.cos(p['yaw']);y=p['y']+.26*math.sin(p['yaw'])
         obstacle=EntityFactory();obstacle.sdf=f'<sdf version="1.9"><model name="fault_obstacle"><static>true</static><pose>{x} {y} {p["z"]+.045} 0 0 {p["yaw"]}</pose><link name="box"><collision name="collision"><geometry><box><size>.04 .14 .15</size></box></geometry></collision><visual name="visual"><geometry><box><size>.04 .14 .15</size></box></geometry><material><diffuse>1 0 0 1</diffuse></material></visual></link></model></sdf>'
@@ -108,7 +129,7 @@ def main():
         record('obstacle_removed_recovery',spin(10,moving))
         # Wait for the actual B bend, then put a collision on its curved path.
         route=Route.perimeter(3.3,5.4,.04,.8,.3)
-        if not spin(35,lambda:bool(truth and route.project(truth[-1]['x'],truth[-1]['y'])[0]>=1.15)):
+        if not spin(35,lambda:bool(truth and 1.15<=route.project(truth[-1]['x'],truth[-1]['y'])[0]<=1.65)):
             raise RuntimeError('Vehicle did not reach B bend')
         p=truth[-1];progress=route.project(p['x'],p['y'])[0]
         center=route.target(progress+.24);ahead=route.target(progress+.25)
@@ -127,7 +148,7 @@ def main():
         record('curve_obstacle_removed_recovery',spin(10,moving))
         pause=WorldControl();pause.pause=True;call('control',pause,WorldControl);start=time.monotonic();spin(1.2)
         stop=stopped_since(start)
-        record('pause_stops_commands',stop is not None and stop['wall']-start<=.56,stop_delay=None if stop is None else stop['wall']-start)
+        record('pause_stops_commands',stop is not None and stop['wall']-start<=STOP_DEADLINE,stop_delay=None if stop is None else stop['wall']-start,deadline=STOP_DEADLINE)
         pause.pause=False;call('control',pause,WorldControl);record('pause_resume',spin(10,moving))
         reset=WorldControl();reset.reset.time_only=True;call('control',reset,WorldControl);spin(1.5)
         record('clock_rewind_latches',bool(states and states[-1]['state']=='FAULT_STOP' and 'clock reset' in states[-1]['reason']) and commands[-1]['v']==0)
@@ -146,8 +167,9 @@ def main():
             try:os.killpg(process.pid,signal.SIGKILL)
             except ProcessLookupError:pass
             process.wait()
-        for name,data in [('summary',dict(passed=bool(results) and all(r['passed'] for r in results),checks=results)),('status',states),('commands',commands),('truth',truth)]:
+        for name,data in [('summary',dict(passed=bool(results) and all(r['passed'] for r in results),checks=results)),('status',states),('commands',commands),('upstream_commands',upstream),('truth',truth)]:
             (root/(name+'.json')).write_text(json.dumps(data,indent=2))
         node.destroy_node();rclpy.shutdown();log.close()
+    return 0 if results and all(r['passed'] for r in results) else 1
 
-if __name__=='__main__':main()
+if __name__=='__main__':raise SystemExit(main())

@@ -103,5 +103,7 @@ def detect_stop_line(image, camera_k, pitch, expected_distance):
         row=(y1+y2)/2
         if row-horizon<5:continue
         distance=.036*fy/(row-horizon)+.004
-        if abs(distance-expected_distance)<.10:candidates.append(distance)
+        # Crosswalk stripes and turn arrows are not additional stop lines.
+        # Accept only a close agreement with the direction-specific map line.
+        if abs(distance-expected_distance)<.035:candidates.append(distance)
     return min(candidates,key=lambda d:abs(d-expected_distance)) if candidates else None

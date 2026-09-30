@@ -90,6 +90,14 @@ class SafetyRegressionTest(unittest.TestCase):
 
 
 class SignalBoundaryTest(unittest.TestCase):
+    def test_delayed_pose_after_green_entry_does_not_stop_inside(self):
+        d=self.driver()
+        self.green(d,2.08)  # Last green-authorized pose just before the line.
+        self.assertFalse(d.committed)
+        self.assertEqual(d.step((2.10,.19,0),Observation(fresh=False),.18),(0.,0.))
+        self.assertGreater(d.step((2.10,.19,0),Observation(light='red',light_id='test',frame=4),.20)[0],0.)
+        self.assertTrue(d.committed)
+
     def driver(self):
         return Driver(route(), [{'id': 'test', 'stop_s': .4, 'line_s': .5382}])
 
@@ -190,4 +198,7 @@ class LongManualReverseTest(unittest.TestCase):
         back=(*r.target(line-.2),math.pi/2)
         d.step(back,Observation(),.2,enabled=False)
         self.assertFalse(d.committed)
-        self.assertEqual(d.step(back,Observation(light='red',light_id='test',frame=4),.25),(0.,0.))
+        command=d.step(back,Observation(light='red',light_id='test',frame=4),.25)
+        self.assertLess(command[0],.05)  # Explicit enable reanchors, then approaches red safely.
+        self.assertFalse(d.committed)
+        self.assertNotEqual(d.state,'FAULT_STOP')

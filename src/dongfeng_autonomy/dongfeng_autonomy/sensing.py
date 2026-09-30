@@ -3,15 +3,15 @@ import math
 
 
 class Freshness:
-    def __init__(self, required, timeout=.5):
-        self.required=tuple(required);self.timeout=timeout;self.received={};self.stamps={}
+    def __init__(self, required, timeout=.5, timeouts=None):
+        self.required=tuple(required);self.timeout=timeout;self.timeouts=timeouts or {};self.received={};self.stamps={}
 
     def update(self,key,stamp,wall):
         if not math.isfinite(stamp) or not math.isfinite(wall) or self.stamps.get(key)==stamp:return False
         self.stamps[key]=stamp;self.received[key]=wall;return True
 
     def ready(self,now,wall):
-        return all(0<=wall-self.received.get(k,-math.inf)<self.timeout and -.1<=now-self.stamps.get(k,-math.inf)<self.timeout for k in self.required)
+        return all(0<=wall-self.received.get(k,-math.inf)<self.timeouts.get(k,self.timeout) and -.1<=now-self.stamps.get(k,-math.inf)<self.timeouts.get(k,self.timeout) for k in self.required)
 
 
 def orientation_rpy(quaternion, available=True):
