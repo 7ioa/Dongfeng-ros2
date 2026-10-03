@@ -1,8 +1,9 @@
 """Full sensor-based lap; GUI and sensor rendering are independently selectable."""
+import json
 from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, EmitEvent
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, EmitEvent, OpaqueFunction
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -11,10 +12,26 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
-def generate_launch_description():
+def _simulation_launch(context):
     share=Path(get_package_share_directory('dongfeng_bringup'))
-    sim=IncludeLaunchDescription(PythonLaunchDescriptionSource(str(share/'launch/simulation.launch.py')),
-        launch_arguments={**{k:LaunchConfiguration(k) for k in ('gui_config','headless','headless_rendering','render_engine','sensor_render_engine','sensor_software_rendering','driving_mode')},'auto_mode':'true'}.items())
+    arguments={k:LaunchConfiguration(k) for k in (
+        'gui_config','headless','headless_rendering','render_engine',
+        'sensor_render_engine','sensor_software_rendering','driving_mode')}
+    arguments['auto_mode']='true'
+    if LaunchConfiguration('mission').perform(context)=='full_demo':
+        from dongfeng_autonomy.mission import Mission
+        config=Path(get_package_share_directory('dongfeng_autonomy'))/'config'
+        mission=Mission.load(config/'full_demo.json',json.loads((config/'signals.json').read_text()))
+        x,y,yaw=mission.initial_pose
+        z=.031+(.002 if mission.segments[0].surface=='yard' else 0.)
+        arguments.update(x=str(x),y=str(y),z=str(z),yaw=str(yaw))
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(str(share/'launch/simulation.launch.py')),
+        launch_arguments=arguments.items())]
+
+
+def generate_launch_description():
+    sim=OpaqueFunction(function=_simulation_launch)
     params={'use_sim_time':True}
     driver=Node(package='dongfeng_autonomy',executable='autonomy_node',output='screen',remappings=[('/camera/image_raw',LaunchConfiguration('image_topic')),('/scan',LaunchConfiguration('scan_topic'))],parameters=[params,{'speed':ParameterValue(LaunchConfiguration('speed'),value_type=float),'driving_mode':LaunchConfiguration('driving_mode'),'mission':LaunchConfiguration('mission'),'map_output':LaunchConfiguration('map_output')}])
     lights=Node(package='dongfeng_autonomy',executable='signal_node',output='screen',parameters=[params,{'phase_offset':ParameterValue(LaunchConfiguration('phase_offset'),value_type=float),'force_color':LaunchConfiguration('force_color')}])

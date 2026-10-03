@@ -39,6 +39,7 @@ install(FILES scripts/command_logic.py DESTINATION lib/${PROJECT_NAME})
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(control_logic test/test_control.py)
+  ament_add_pytest_test(autonomy_launch test/test_autonomy_launch.py)
 endif()
 
 ament_package()

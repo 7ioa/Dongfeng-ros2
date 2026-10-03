@@ -2,319 +2,17 @@
   "name": "full_demo",
   "segments": [
     {
-      "name": "front_AB",
+      "name": "parking_depart",
       "geometry": [
         {
           "type": "line",
           "from": [
             1.65,
-            0.19
+            4.815
           ],
           "to": [
-            2.46,
-            0.19
-          ]
-        }
-      ],
-      "speed": 0.18,
-      "lane_required": true,
-      "surface": "perimeter",
-      "next_segment": "B_curve"
-    },
-    {
-      "name": "B_curve",
-      "geometry": [
-        {
-          "type": "arc",
-          "center": [
-            2.46,
-            0.84
-          ],
-          "radius": 0.65,
-          "degrees": [
-            -90,
-            0
-          ]
-        }
-      ],
-      "speed": 0.13,
-      "kind": "slope",
-      "surface": "perimeter",
-      "next_segment": "right_outer"
-    },
-    {
-      "name": "right_outer",
-      "geometry": [
-        {
-          "type": "line",
-          "from": [
-            3.11,
-            0.84
-          ],
-          "to": [
-            3.11,
-            2.165
-          ]
-        }
-      ],
-      "speed": 0.18,
-      "lane_required": true,
-      "surface": "perimeter",
-      "next_segment": "enter_crossroad_west"
-    },
-    {
-      "name": "enter_crossroad_west",
-      "geometry": [
-        {
-          "type": "arc",
-          "center": [
-            2.71,
-            2.165
-          ],
-          "radius": 0.4,
-          "degrees": [
-            0,
-            90
-          ]
-        },
-        {
-          "type": "line",
-          "from": [
-            2.71,
-            2.565
-          ],
-          "to": [
-            2.4,
-            2.565
-          ]
-        }
-      ],
-      "speed": 0.1,
-      "kind": "intersection",
-      "next_segment": "signal_1_north_turn"
-    },
-    {
-      "name": "signal_1_north_turn",
-      "geometry": [
-        {
-          "type": "line",
-          "from": [
-            2.4,
-            2.565
-          ],
-          "to": [
-            2.15,
-            2.565
-          ]
-        },
-        {
-          "type": "arc",
-          "center": [
-            2.15,
-            2.91
-          ],
-          "radius": 0.345,
-          "degrees": [
-            -90,
-            -180
-          ]
-        }
-      ],
-      "speed": 0.09,
-      "kind": "intersection",
-      "lookahead": 0.12,
-      "signal": {
-        "id": "signal_1",
-        "line": [
-          2.1,
-          2.565
-        ],
-        "require_new_green": false
-      },
-      "next_segment": "central_north"
-    },
-    {
-      "name": "central_north",
-      "geometry": [
-        {
-          "type": "line",
-          "from": [
-            1.805,
-            2.91
-          ],
-          "to": [
-            1.805,
-            3.36
-          ]
-        }
-      ],
-      "speed": 0.13,
-      "lane_required": true,
-      "next_segment": "roundabout_entry"
-    },
-    {
-      "name": "roundabout_entry",
-      "geometry": [
-        {
-          "type": "bezier",
-          "points": [
-            [
-              1.805,
-              3.36
-            ],
-            [
-              1.805,
-              3.51
-            ],
-            [
-              1.882340187157677,
-              3.6028522197135153
-            ],
-            [
-              1.9823401871576771,
-              3.6900862197135154
-            ]
-          ]
-        }
-      ],
-      "speed": 0.085,
-      "kind": "roundabout",
-      "lookahead": 0.11,
-      "next_segment": "P5_roundabout"
-    },
-    {
-      "name": "P5_roundabout",
-      "geometry": [
-        {
-          "type": "arc",
-          "center": [
-            1.65,
-            3.98
-          ],
-          "radius": [
-            0.47,
-            0.41
-          ],
-          "degrees": [
-            -45,
-            180
-          ]
-        }
-      ],
-      "speed": 0.085,
-      "kind": "roundabout",
-      "lookahead": 0.11,
-      "corridor": 0.045,
-      "next_segment": "left_gate_approach"
-    },
-    {
-      "name": "left_gate_approach",
-      "geometry": [
-        {
-          "type": "bezier",
-          "points": [
-            [
-              1.18,
-              3.98
-            ],
-            [
-              1.18,
-              3.82
-            ],
-            [
-              1.03,
-              3.805
-            ],
-            [
-              0.9,
-              3.805
-            ]
-          ]
-        },
-        {
-          "type": "line",
-          "from": [
-            0.9,
-            3.805
-          ],
-          "to": [
-            0.535,
-            3.805
-          ]
-        },
-        {
-          "type": "arc",
-          "center": [
-            0.535,
-            3.995
-          ],
-          "radius": 0.19,
-          "degrees": [
-            -90,
-            -225
-          ]
-        },
-        {
-          "type": "line",
-          "from": [
-            0.400649711574556,
-            4.129350288425444
-          ],
-          "to": [
-            0.565,
-            4.2937
-          ]
-        }
-      ],
-      "speed": 0.075,
-      "kind": "parking",
-      "lookahead": 0.1,
-      "corridor": 0.045,
-      "next_segment": "parking_slam_S"
-    },
-    {
-      "name": "parking_slam_S",
-      "geometry": [
-        {
-          "type": "bezier",
-          "points": [
-            [
-              0.565,
-              4.2937
-            ],
-            [
-              0.7,
-              4.44
-            ],
-            [
-              0.75,
-              4.65
-            ],
-            [
-              1.05,
-              4.65
-            ]
-          ]
-        },
-        {
-          "type": "bezier",
-          "points": [
-            [
-              1.05,
-              4.65
-            ],
-            [
-              1.4,
-              4.65
-            ],
-            [
-              1.45,
-              4.83
-            ],
-            [
-              1.8,
-              4.83
-            ]
+            1.8,
+            4.815
           ]
         },
         {
@@ -322,11 +20,11 @@
           "points": [
             [
               1.8,
-              4.83
+              4.815
             ],
             [
               2.15,
-              4.83
+              4.815
             ],
             [
               2.4,
@@ -632,10 +330,10 @@
       ],
       "speed": 0.14,
       "lane_required": true,
-      "next_segment": "return_start"
+      "next_segment": "front_AB_join"
     },
     {
-      "name": "return_start",
+      "name": "front_AB_join",
       "geometry": [
         {
           "type": "line",
@@ -666,7 +364,349 @@
       "lookahead": 0.085,
       "corridor": 0.045,
       "completion_distance": 0.025,
-      "next_segment": null
+      "next_segment": "front_AB"
+    },
+    {
+      "name": "front_AB",
+      "geometry": [
+        {
+          "type": "line",
+          "from": [
+            1.65,
+            0.19
+          ],
+          "to": [
+            2.46,
+            0.19
+          ]
+        }
+      ],
+      "speed": 0.18,
+      "lane_required": true,
+      "surface": "perimeter",
+      "next_segment": "B_curve"
+    },
+    {
+      "name": "B_curve",
+      "geometry": [
+        {
+          "type": "arc",
+          "center": [
+            2.46,
+            0.84
+          ],
+          "radius": 0.65,
+          "degrees": [
+            -90,
+            0
+          ]
+        }
+      ],
+      "speed": 0.13,
+      "kind": "slope",
+      "surface": "perimeter",
+      "next_segment": "right_outer"
+    },
+    {
+      "name": "right_outer",
+      "geometry": [
+        {
+          "type": "line",
+          "from": [
+            3.11,
+            0.84
+          ],
+          "to": [
+            3.11,
+            2.165
+          ]
+        }
+      ],
+      "speed": 0.18,
+      "lane_required": true,
+      "surface": "perimeter",
+      "next_segment": "enter_crossroad_west"
+    },
+    {
+      "name": "enter_crossroad_west",
+      "geometry": [
+        {
+          "type": "arc",
+          "center": [
+            2.71,
+            2.165
+          ],
+          "radius": 0.4,
+          "degrees": [
+            0,
+            90
+          ]
+        },
+        {
+          "type": "line",
+          "from": [
+            2.71,
+            2.565
+          ],
+          "to": [
+            2.4,
+            2.565
+          ]
+        }
+      ],
+      "speed": 0.1,
+      "kind": "intersection",
+      "next_segment": "signal_1_north_turn"
+    },
+    {
+      "name": "signal_1_north_turn",
+      "geometry": [
+        {
+          "type": "line",
+          "from": [
+            2.4,
+            2.565
+          ],
+          "to": [
+            2.15,
+            2.565
+          ]
+        },
+        {
+          "type": "arc",
+          "center": [
+            2.15,
+            2.91
+          ],
+          "radius": 0.345,
+          "degrees": [
+            -90,
+            -180
+          ]
+        }
+      ],
+      "speed": 0.09,
+      "kind": "intersection",
+      "lookahead": 0.12,
+      "signal": {
+        "id": "signal_1",
+        "line": [
+          2.1,
+          2.565
+        ],
+        "require_new_green": false
+      },
+      "next_segment": "central_north"
+    },
+    {
+      "name": "central_north",
+      "geometry": [
+        {
+          "type": "line",
+          "from": [
+            1.805,
+            2.91
+          ],
+          "to": [
+            1.805,
+            3.36
+          ]
+        }
+      ],
+      "speed": 0.13,
+      "lane_required": true,
+      "next_segment": "roundabout_entry"
+    },
+    {
+      "name": "roundabout_entry",
+      "geometry": [
+        {
+          "type": "bezier",
+          "points": [
+            [
+              1.805,
+              3.36
+            ],
+            [
+              1.805,
+              3.51
+            ],
+            [
+              1.882340187157677,
+              3.6028522197135153
+            ],
+            [
+              1.9823401871576771,
+              3.6900862197135154
+            ]
+          ]
+        }
+      ],
+      "speed": 0.085,
+      "kind": "roundabout",
+      "lookahead": 0.11,
+      "next_segment": "P5_roundabout"
+    },
+    {
+      "name": "P5_roundabout",
+      "geometry": [
+        {
+          "type": "arc",
+          "center": [
+            1.65,
+            3.98
+          ],
+          "radius": [
+            0.47,
+            0.41
+          ],
+          "degrees": [
+            -45,
+            180
+          ]
+        }
+      ],
+      "speed": 0.085,
+      "kind": "roundabout",
+      "lookahead": 0.11,
+      "corridor": 0.045,
+      "next_segment": "left_gate_approach"
+    },
+    {
+      "name": "left_gate_approach",
+      "geometry": [
+        {
+          "type": "bezier",
+          "points": [
+            [
+              1.18,
+              3.98
+            ],
+            [
+              1.18,
+              3.82
+            ],
+            [
+              1.03,
+              3.805
+            ],
+            [
+              0.9,
+              3.805
+            ]
+          ]
+        },
+        {
+          "type": "line",
+          "from": [
+            0.9,
+            3.805
+          ],
+          "to": [
+            0.535,
+            3.805
+          ]
+        },
+        {
+          "type": "arc",
+          "center": [
+            0.535,
+            3.995
+          ],
+          "radius": 0.19,
+          "degrees": [
+            -90,
+            -225
+          ]
+        },
+        {
+          "type": "line",
+          "from": [
+            0.400649711574556,
+            4.129350288425444
+          ],
+          "to": [
+            0.565,
+            4.2937
+          ]
+        }
+      ],
+      "speed": 0.075,
+      "kind": "parking",
+      "lookahead": 0.1,
+      "corridor": 0.045,
+      "next_segment": "parking_return"
+    },
+    {
+      "name": "parking_return",
+      "geometry": [
+        {
+          "type": "bezier",
+          "points": [
+            [
+              0.565,
+              4.2937
+            ],
+            [
+              0.7,
+              4.44
+            ],
+            [
+              0.75,
+              4.65
+            ],
+            [
+              1.05,
+              4.65
+            ]
+          ]
+        },
+        {
+          "type": "bezier",
+          "points": [
+            [
+              1.05,
+              4.65
+            ],
+            [
+              1.2,
+              4.65
+            ],
+            [
+              1.28,
+              4.815
+            ],
+            [
+              1.45,
+              4.815
+            ]
+          ]
+        },
+        {
+          "type": "line",
+          "from": [
+            1.45,
+            4.815
+          ],
+          "to": [
+            1.65,
+            4.815
+          ]
+        }
+      ],
+      "speed": 0.09,
+      "kind": "parking",
+      "surface": "yard",
+      "lookahead": 0.12,
+      "corridor": 0.05,
+      "next_segment": null,
+      "completion_distance": 0.01
     }
+  ],
+  "parking_bounds": [
+    1.42,
+    4.65,
+    1.88,
+    4.98
   ]
 }

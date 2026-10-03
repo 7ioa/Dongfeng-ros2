@@ -16,6 +16,29 @@ CONFIG=Path(__file__).resolve().parents[1]/'config'
 def mission():return Mission.load(CONFIG/'full_demo.json',json.loads((CONFIG/'signals.json').read_text()))
 
 class MissionTest(unittest.TestCase):
+    def test_parking_start_and_return_preserve_complete_scene_coverage(self):
+        m=mission()
+        np.testing.assert_allclose(m.target(0),[1.65,4.815],atol=1e-6)
+        np.testing.assert_allclose(m.target(m.length),m.target(0),atol=1e-6)
+        self.assertEqual([s.name for s in m.segments],[
+            'parking_depart','parking_exit','right_ascent_C','rear_elevated',
+            'D_left_descent','signal_6_south','enter_crossroad_east',
+            'signal_2_south_turn','central_south','front_AB_join','front_AB',
+            'B_curve','right_outer','enter_crossroad_west','signal_1_north_turn',
+            'central_north','roundabout_entry','P5_roundabout',
+            'left_gate_approach','parking_return'])
+        self.assertEqual([s['id'] for s in m.signals],['signal_6','signal_2','signal_1'])
+        self.assertTrue(all(s.kind=='parking' and s.surface=='yard'
+                            for s in (m.segments[0],m.segments[-1])))
+        self.assertGreater(m.length,21.)
+        self.assertLess(m.length,22.)
+
+    def test_initial_pose_is_derived_from_first_segment(self):
+        m=Mission('north',[RouteSegment('first',Route([[2,3],[2,4]],False))])
+        pose=getattr(m,'initial_pose',None)
+        self.assertIsNotNone(pose)
+        np.testing.assert_allclose(pose,[2,3,math.pi/2],atol=1e-6)
+
     def test_each_demo_signal_releases_on_existing_green_without_waiting_a_cycle(self):
         from dongfeng_autonomy.speed import SpeedProfile
         for index in range(3):
@@ -35,8 +58,8 @@ class MissionTest(unittest.TestCase):
 
     def test_ordered_segments_and_signal_directions(self):
         m=mission()
-        self.assertEqual(len(m.segments),19)
-        self.assertEqual([s['id'] for s in m.signals],['signal_1','signal_6','signal_2'])
+        self.assertEqual(len(m.segments),20)
+        self.assertEqual([s['id'] for s in m.signals],['signal_6','signal_2','signal_1'])
         for sig in m.signals:
             seg=m.segments[sig['segment_index']]
             heading=seg.route.heading(sig['stop_s']-m.offsets[sig['segment_index']])
@@ -64,7 +87,7 @@ class MissionTest(unittest.TestCase):
         self.assertEqual(d.state,'FAULT_STOP')
 
     def test_all_segments_complete_with_no_lanes_in_special_areas(self):
-        m=mission();d=Driver(m,m.signals);p=np.array([1.65,.19,0.]);seen=set()
+        m=mission();d=Driver(m,m.signals);p=m.initial_pose.copy();seen=set()
         for i in range(12000):
             sid=d.signals[d.signal_index]['id'] if d.signal_index<len(d.signals) else ''
             obs=Observation(frame=i,light='green' if d.green_cycle_ready else 'red',light_id=sid,lane_valid=m.active.lane_required)
@@ -74,15 +97,16 @@ class MissionTest(unittest.TestCase):
         self.assertEqual(d.state,'COMPLETE',d.reason)
         self.assertEqual(m.index,len(m.segments)-1)
         self.assertTrue({'roundabout','parking','slope'}<=seen)
-        self.assertLess(math.dist(p[:2],[1.65,.19]),.08)
+        self.assertLess(math.dist(p[:2],m.target(0)),.08)
 
     def test_resume_prefers_current_visit_and_rejects_distant_segment(self):
-        m=mission();m.index=7;s=m.offsets[7]+.5;p=(*m.target(s),m.active.route.heading(.5))
+        m=mission();index=next(i for i,seg in enumerate(m.segments) if seg.name=='P5_roundabout')
+        m.index=index;s=m.offsets[index]+.5;p=(*m.target(s),m.active.route.heading(.5))
         d=Driver(m,m.signals);d.progress=s-.3
         d.step(p,Observation(),0,False)
         self.assertEqual(d.state,'MANUAL')
         self.assertGreater(d.step(p,Observation(),.1,True)[0],0)
-        self.assertEqual(m.index,7)
+        self.assertEqual(m.index,index)
         self.assertAlmostEqual(d.progress,s,places=3)
         self.assertFalse(d.resume((1.65,.19,0)))
 
@@ -92,12 +116,13 @@ class MissionTest(unittest.TestCase):
         for k in ('scan','odom','imu'):f.update(k,1,1)
         self.assertTrue(f.ready(1.1,1.1))
         self.assertFalse(f.ready(1.6,1.6))
-        d=Driver(mission(),[])
-        self.assertLessEqual(d.step((1.65,.19,0),Observation(localization_age=.8),0)[0],.09)
-        self.assertEqual(d.step((1.65,.19,0),Observation(localization_age=1.6),.1),(0.,0.))
+        m=mission();d=Driver(m,[]);pose=m.initial_pose
+        self.assertLessEqual(d.step(pose,Observation(localization_age=.8),0)[0],.09)
+        self.assertEqual(d.step(pose,Observation(localization_age=1.6),.1),(0.,0.))
 
     def test_slope_retains_traction_speed_and_obstacle_protection(self):
-        m=mission();m.index=11;d=Driver(m,m.signals);d.progress=m.offsets[11]+.10
+        m=mission();m.index=next(i for i,seg in enumerate(m.segments) if seg.name=='right_ascent_C')
+        d=Driver(m,m.signals);d.progress=m.offsets[m.index]+.10
         pose=(*m.target(d.progress),math.pi/2)
         self.assertGreater(d.step(pose,Observation(pitch=-.23,lane_valid=False),0)[0],.12)
         self.assertEqual(d.state,'SLOPE')
@@ -105,12 +130,13 @@ class MissionTest(unittest.TestCase):
         self.assertEqual(d.state,'OBSTACLE_STOP')
 
     def test_scan_innovation_gate_rejects_crest_runaway(self):
-        m=mission();m.index=11;s=m.offsets[11]+.8;pose=np.r_[m.target(s),0]
+        m=mission();m.index=next(i for i,seg in enumerate(m.segments) if seg.name=='right_ascent_C')
+        s=m.offsets[m.index]+.8;pose=np.r_[m.target(s),0]
         self.assertFalse(consistent_correction(np.array([-.12,-.03]),pose,m,s))
         self.assertTrue(consistent_correction(np.array([.002,-.001]),pose,m,s))
 
     def test_fault_requires_explicit_reenable(self):
-        d=Driver(mission(),[]);pose=(1.65,.19,0.)
+        m=mission();d=Driver(m,[]);pose=m.initial_pose
         d.step(pose,Observation(clearance=math.nan),0)
         self.assertEqual(d.step(pose,Observation(),.1),(0.,0.))
         d.step(pose,Observation(),.2,False)
@@ -176,14 +202,47 @@ class MappingTest(unittest.TestCase):
             self.assertTrue(free<occupancy[1,1]<occupied)
 
 class MissionEvaluationTest(unittest.TestCase):
+    def test_configured_parking_goal_matches_the_green_region(self):
+        m=mission()
+        self.assertEqual(tuple(getattr(m,'parking_bounds',())),(1.42,4.65,1.88,4.98))
+
+    def test_center_inside_green_but_body_outside_cannot_pass(self):
+        from dongfeng_autonomy.evaluation import evaluate_mission
+        for x,y in ((1.43,4.815),(1.87,4.815),(1.65,4.66),(1.65,4.97)):
+            with self.subTest(x=x,y=y):
+                m,truth=self.trajectory()
+                for sample in truth[-26:]:sample.update(x=x,y=y,yaw=0.)
+                result=evaluate_mission(truth,True,m)
+                self.assertIs(result.get('parking_goal_pass'),False)
+
+    def test_final_car_body_is_inside_green_region(self):
+        from dongfeng_autonomy.evaluation import evaluate_mission
+        m,truth=self.trajectory()
+        result=evaluate_mission(truth,True,m)
+        self.assertIs(result.get('parking_goal_pass'),True)
+        corners=np.array(result['parking_footprint'])
+        self.assertTrue(np.all(corners[:,0]>1.42) and np.all(corners[:,0]<1.88))
+        self.assertTrue(np.all(corners[:,1]>4.65) and np.all(corners[:,1]<4.98))
+
+    def test_nonfinite_final_pose_rejects_parking_without_crashing(self):
+        from dongfeng_autonomy.evaluation import evaluate_mission
+        for change in (dict(yaw=math.inf),dict(yaw=math.nan),dict(x=math.inf)):
+            with self.subTest(change=change):
+                m,truth=self.trajectory();truth[-1].update(change)
+                try:result=evaluate_mission(truth,True,m)
+                except ValueError as error:self.fail('Invalid truth must be rejected: '+str(error))
+                self.assertFalse(result['lap_pass'])
+                self.assertFalse(result['parking_goal_pass'])
+
     def trajectory(self):
         m=mission();truth=[];t=0.
         for i,seg in enumerate(m.segments):
             for s in np.arange(0,seg.route.length,.015):
                 x,y=seg.route.target(s)
                 truth.append(dict(t=t,x=x,y=y,yaw=seg.route.heading(s),progress=float(m.offsets[i]+s),error=0.,segment_index=i));t+=.1
+        x,y=m.target(m.length);last=m.segments[-1].route
         for _ in range(26):
-            truth.append(dict(t=t,x=1.65,y=.19,yaw=0.,progress=m.length,error=0.,segment_index=len(m.segments)-1));t+=.1
+            truth.append(dict(t=t,x=x,y=y,yaw=last.heading(last.length),progress=m.length,error=0.,segment_index=len(m.segments)-1));t+=.1
         return m,truth
 
     def test_complete_ordered_mission_and_final_stop(self):

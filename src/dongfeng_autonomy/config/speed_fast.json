@@ -25,8 +25,9 @@
     "roundabout_entry": 0.1,
     "P5_roundabout": 0.12,
     "left_gate_approach": 0.075,
-    "parking_slam_S": 0.14,
     "parking_exit": 0.09,
-    "return_start": 0.08
+    "parking_depart": 0.14,
+    "parking_return": 0.09,
+    "front_AB_join": 0.08
   }
 }

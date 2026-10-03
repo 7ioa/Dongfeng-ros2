@@ -58,7 +58,9 @@ class Autonomy(Node):
         profile=SpeedProfile.load(root/'speed_fast.json',max_speed=requested if requested!=0. else None)
         speed=profile.max_speed
         self.driver=Driver(self.route,self.signals,speed,profile=profile)
-        self.pose=np.array([1.65,.19,0.]);self.pitch=0.;self.roll=0.
+        self.pose=(self.route.initial_pose if isinstance(self.route,Mission)
+                   else np.r_[self.route.target(0),self.route.heading(0)])
+        self.pitch=0.;self.roll=0.
         self.yaw_rate=0.;self.yaw_controller=YawController();self.control_time=None
         self.prev_odom=None;self.imu_ready=False
         self.sensor_faults=set()

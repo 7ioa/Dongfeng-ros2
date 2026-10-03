@@ -29,7 +29,7 @@ def run_probe(repo,root,domain,kind):
     driver_env=os.environ.copy()
     driver_env['AMENT_PREFIX_PATH']=str(repo/'install_control/dongfeng_autonomy')+os.pathsep+driver_env.get('AMENT_PREFIX_PATH','')
     driver=subprocess.Popen(['python3',str(repo/'scripts/autonomy/speed_fault_driver.py'),'--ros-args',
-        '-p','use_sim_time:=true','-p','driving_mode:=fast','-p','mission:=full_demo',
+        '-p','use_sim_time:=true','-p','driving_mode:=fast','-p','mission:=perimeter',
         '-p',f'map_output:={root}/parking_map'],env=driver_env,stdout=driver_log,stderr=subprocess.STDOUT,start_new_session=True)
     rclpy.init();node=rclpy.create_node('independent_speed_braking');gz=GzNode()
     states=[];commands=[];truth=[]
@@ -51,7 +51,8 @@ def run_probe(repo,root,domain,kind):
     result=dict(probe=kind,passed=False)
     try:
         ready=spin(70,lambda:bool(states and truth and states[-1]['state']=='DRIVE'
-                    and states[-1]['measured_speed']>=.38 and states[-1]['segment_index']==2
+                    and states[-1]['measured_speed']>=.38
+                    and abs(states[-1]['pose'][2]-math.pi/2)<.1
                     and abs(states[-1]['tracking_curvature'])<.25))
         if not ready:raise RuntimeError('Did not reach measured speed >= 0.38 m/s on the long right straight')
         origin=copy.deepcopy(truth[-1]);initial=states[-1]['measured_speed'];start=time.monotonic()

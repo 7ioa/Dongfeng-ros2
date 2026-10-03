@@ -43,11 +43,18 @@ class RouteSegment:
 
 
 class Mission:
-    def __init__(self, name, segments):
+    def __init__(self, name, segments, parking_bounds=None):
         if not segments:raise ValueError('Empty mission')
         self.name=name;self.segments=segments;self.index=0
         self.offsets=np.r_[0.,np.cumsum([s.route.length for s in segments])]
         self.length=float(self.offsets[-1]);self.closed=False
+        self.parking_bounds=None
+        if parking_bounds is not None:
+            bounds=np.asarray(parking_bounds,dtype=float)
+            if (bounds.shape!=(4,) or not np.isfinite(bounds).all()
+                    or bounds[0]>=bounds[2] or bounds[1]>=bounds[3]):
+                raise ValueError('Invalid parking goal bounds')
+            self.parking_bounds=tuple(bounds.tolist())
         self.signals=[]
         names=[s.name for s in segments]
         if len(set(names))!=len(names):raise ValueError('Duplicate segment name')
@@ -79,10 +86,15 @@ class Mission:
             if item.get('signal'):
                 sig=item['signal'];item['signal']={**heads[sig['id']],**sig}
             segments.append(RouteSegment(route=Route(geometry(primitives),closed=False),**item))
-        return cls(cfg['name'],segments)
+        return cls(cfg['name'],segments,parking_bounds=cfg.get('parking_bounds'))
 
     @property
     def active(self):return self.segments[self.index]
+
+    @property
+    def initial_pose(self):
+        first=self.segments[0].route
+        return np.r_[first.target(0),first.heading(0)]
 
     def project(self,x,y,previous=None):
         offset=self.offsets[self.index]

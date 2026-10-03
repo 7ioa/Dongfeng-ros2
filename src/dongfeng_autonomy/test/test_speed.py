@@ -83,13 +83,13 @@ class SpeedTest(unittest.TestCase):
         root=Path(__file__).parents[1]/'config'
         m=Mission.load(root/'full_demo.json',json.loads((root/'signals.json').read_text()))
         d=Driver(m,[],speed=.4,profile=SpeedProfile.fast())
-        p=np.array([1.65,.19,0.]);seen=set()
+        p=m.initial_pose.copy();seen=set()
         for i in range(12000):
             v,w=d.step(p,Observation(measured_speed=0.),i*.05)
             seen.add(m.index);p+=[.05*v*math.cos(p[2]),.05*v*math.sin(p[2]),.05*w]
             if d.state in ('COMPLETE','FAULT_STOP'):break
         self.assertEqual(d.state,'COMPLETE',d.reason)
-        self.assertEqual(len(seen),19)
+        self.assertEqual(seen,set(range(len(m.segments))))
 
 
 class ClosedRouteStopTest(unittest.TestCase):
