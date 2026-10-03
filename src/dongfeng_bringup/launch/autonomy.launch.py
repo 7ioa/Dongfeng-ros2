@@ -14,9 +14,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     share=Path(get_package_share_directory('dongfeng_bringup'))
     sim=IncludeLaunchDescription(PythonLaunchDescriptionSource(str(share/'launch/simulation.launch.py')),
-        launch_arguments={**{k:LaunchConfiguration(k) for k in ('gui_config','headless','headless_rendering','render_engine','sensor_render_engine','sensor_software_rendering')},'auto_mode':'true'}.items())
+        launch_arguments={**{k:LaunchConfiguration(k) for k in ('gui_config','headless','headless_rendering','render_engine','sensor_render_engine','sensor_software_rendering','driving_mode')},'auto_mode':'true'}.items())
     params={'use_sim_time':True}
-    driver=Node(package='dongfeng_autonomy',executable='autonomy_node',output='screen',remappings=[('/camera/image_raw',LaunchConfiguration('image_topic')),('/scan',LaunchConfiguration('scan_topic'))],parameters=[params,{'speed':ParameterValue(LaunchConfiguration('speed'),value_type=float),'mission':LaunchConfiguration('mission'),'map_output':LaunchConfiguration('map_output')}])
+    driver=Node(package='dongfeng_autonomy',executable='autonomy_node',output='screen',remappings=[('/camera/image_raw',LaunchConfiguration('image_topic')),('/scan',LaunchConfiguration('scan_topic'))],parameters=[params,{'speed':ParameterValue(LaunchConfiguration('speed'),value_type=float),'driving_mode':LaunchConfiguration('driving_mode'),'mission':LaunchConfiguration('mission'),'map_output':LaunchConfiguration('map_output')}])
     lights=Node(package='dongfeng_autonomy',executable='signal_node',output='screen',parameters=[params,{'phase_offset':ParameterValue(LaunchConfiguration('phase_offset'),value_type=float),'force_color':LaunchConfiguration('force_color')}])
     return LaunchDescription([
         DeclareLaunchArgument('gui_config',default_value=''),
@@ -27,7 +27,8 @@ def generate_launch_description():
         DeclareLaunchArgument('sensor_render_engine',default_value='ogre2'),
         DeclareLaunchArgument('image_topic',default_value='/camera/image_raw'),
         DeclareLaunchArgument('scan_topic',default_value='/scan'),
-        DeclareLaunchArgument('speed',default_value='0.20'),
+        DeclareLaunchArgument('driving_mode',default_value='fast',choices=['fast']),
+        DeclareLaunchArgument('speed',default_value='0.0',description='0 selects the optimized 0.40 m/s maximum; a lower positive cap is optional.'),
         DeclareLaunchArgument('mission',default_value='full_demo'),
         DeclareLaunchArgument('map_output',default_value='reports/autonomy/parking_map'),
         DeclareLaunchArgument('phase_offset',default_value='0.0'),

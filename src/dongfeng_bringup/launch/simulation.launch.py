@@ -161,6 +161,8 @@ def _launch_setup(context, *args, **kwargs):
                 gz_launch,launch_arguments={'gz_args':shlex.join(gui_args),
                     'on_exit_shutdown':'true'}.items())]))
 
+    mode=value('driving_mode')
+    if mode!='fast':raise RuntimeError('Only the optimized fast driving profile is supported')
     use_sim_time = flag('use_sim_time')
     robot_name = value('robot_name')
 
@@ -179,10 +181,12 @@ def _launch_setup(context, *args, **kwargs):
         package='dongfeng_bringup', executable='command_guard',
         name='command_guard', output='screen',
         parameters=[{'use_sim_time': use_sim_time,
+                     'driving_mode': mode,
                      'command_timeout': float(value('command_timeout'))}])
     arbiter = Node(package='dongfeng_autonomy', executable='arbiter_node',
                    name='command_arbiter', output='screen',
                    parameters=[{'use_sim_time': use_sim_time,
+                                'driving_mode': mode,
                                 'start_enabled': flag('auto_mode')}])
 
     spawn = Node(
@@ -221,7 +225,7 @@ def _launch_setup(context, *args, **kwargs):
                 # Wrapped so launch_ros keeps the whole URDF as one string
                 # instead of trying to read it as YAML.
                 'robot_description': ParameterValue(
-                    Command(['xacro ', shlex.quote(xacro_file)]), value_type=str),
+                    Command(['xacro ', shlex.quote(xacro_file), ' driving_mode:=', mode]), value_type=str),
                 'use_sim_time': use_sim_time,
             }]),
 
@@ -262,6 +266,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('gui_config',default_value='',description='Optional GUI configuration for validation.'),
+        DeclareLaunchArgument('driving_mode', default_value='fast', choices=['fast']),
         DeclareLaunchArgument('auto_mode', default_value='false',
                               description='Enable automatic input at startup.'),
         DeclareLaunchArgument(

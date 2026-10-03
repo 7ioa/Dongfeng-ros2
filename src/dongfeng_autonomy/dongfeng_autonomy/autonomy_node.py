@@ -17,11 +17,12 @@ from tf2_ros import TransformBroadcaster
 from ament_index_python.packages import get_package_share_directory
 from .route import Route, wrap
 from .mission import Mission
+from .speed import SpeedProfile
 from .mapping import ParkingMapper, outside_robot
 from .control import Driver, Observation, obstacle_distance, YawController
 from .vision import detect_lane, detect_light, signal_roi, detect_stop_line
 from .localization import LandmarkMap, rotation, consistent_correction
-from .sensing import Freshness, orientation_rpy
+from .sensing import Freshness, orientation_rpy, tracking_age
 
 
 def rpy(q):
@@ -51,7 +52,12 @@ class Autonomy(Node):
         if mode=='full_demo':
             self.route=Mission.load(root/'full_demo.json',signals)
             self.signals=self.route.signals
-        self.driver=Driver(self.route,self.signals,float(self.declare_parameter('speed',.20).value))
+        self.driving_mode=str(self.declare_parameter('driving_mode','fast').value)
+        if self.driving_mode!='fast':raise ValueError('Only the optimized fast driving profile is supported')
+        requested=float(self.declare_parameter('speed',0.).value)
+        profile=SpeedProfile.load(root/'speed_fast.json',max_speed=requested if requested!=0. else None)
+        speed=profile.max_speed
+        self.driver=Driver(self.route,self.signals,speed,profile=profile)
         self.pose=np.array([1.65,.19,0.]);self.pitch=0.;self.roll=0.
         self.yaw_rate=0.;self.yaw_controller=YawController();self.control_time=None
         self.prev_odom=None;self.imu_ready=False
@@ -201,6 +207,7 @@ class Autonomy(Node):
         self.observation.pitch=self.pitch
         self.observation.localization_age=max(ages['localization'],source_ages['localization'])
         self.observation.measured_speed=self.measured_speed
+        self.observation.pose_age=tracking_age(ages,source_ages)
         if self.ranges is not None and self.observation.fresh and self.enabled:
             self.path_curvature=self.driver.tracking_curvature(self.pose)
             self.observation.clearance=obstacle_distance(self.ranges,self.angles,self.path_curvature)
@@ -242,7 +249,7 @@ class Autonomy(Node):
             data=dict(state=self.driver.state,reason=self.driver.reason,progress=round(self.driver.progress,3),length=round(self.route.length,3),pose=self.pose.tolist(),pitch=self.pitch,localized=self.localization_good,lane_valid=self.observation.lane_valid,lane_error=self.observation.lane_error,light=self.observation.light,signal=self.observation.light_id,clearance=self.observation.clearance if math.isfinite(self.observation.clearance) else None,ages={k:v if math.isfinite(v) else None for k,v in ages.items()},command=command,sim_time=now,frame=self.frame,stop_distance=self.observation.stop_distance)
             data.update(self.route.status(self.driver.progress) if isinstance(self.route,Mission) else dict(mission='perimeter',segment='perimeter',segment_index=0,segment_progress=self.driver.progress,mission_progress=self.driver.progress/self.route.length))
             if self.driver.state=='COMPLETE':data['mission_progress']=1.
-            data.update(localization_delta=self.localization_delta,localization_rejected=self.localization_rejected,measured_speed=self.measured_speed,mapping_scans=self.mapper.scans,mapping_matches=self.mapper.matches,green_frames=self.driver.green_frames,committed=self.driver.committed,expected_signal=self.driver.signals[self.driver.signal_index]['id'] if self.driver.signal_index<len(self.driver.signals) else '')
+            data.update(driving_mode=self.driving_mode,speed_target=self.driver.speed_target,tracking_curvature=self.path_curvature,localization_delta=self.localization_delta,localization_rejected=self.localization_rejected,measured_speed=self.measured_speed,mapping_scans=self.mapper.scans,mapping_matches=self.mapper.matches,green_cycle_ready=self.driver.green_cycle_ready,green_frames=self.driver.green_frames,committed=self.driver.committed,expected_signal=self.driver.signals[self.driver.signal_index]['id'] if self.driver.signal_index<len(self.driver.signals) else '')
             self.status_pub.publish(String(data=json.dumps(data,allow_nan=False)))
 
 

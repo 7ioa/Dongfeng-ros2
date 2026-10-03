@@ -23,3 +23,10 @@ def orientation_rpy(quaternion, available=True):
     return (math.atan2(2*(w*x+y*z),1-2*(x*x+y*y)),
             math.asin(max(-1.,min(1.,2*(w*y-z*x)))),
             math.atan2(2*(w*z+x*y),1-2*(y*y+z*z)))
+
+
+def tracking_age(ages,source_ages):
+    """Conservative odometry/IMU age; missing startup data cannot move the car."""
+    values=[ages.get(k,math.inf) for k in ('odom','imu')]
+    values += [source_ages.get(k,math.inf) for k in ('odom','imu')]
+    return max([0.]+[v for v in values if math.isfinite(v)])

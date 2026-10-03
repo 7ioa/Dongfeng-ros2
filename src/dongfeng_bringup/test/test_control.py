@@ -97,7 +97,9 @@ class GuardTest(unittest.TestCase):
 
 class IntegrationConfigTest(unittest.TestCase):
     def test_all_four_wheels_receive_correct_turn_direction(self):
-        robot = ET.parse(PACKAGE.parent / 'dongfeng_description/urdf/dongfeng_car.urdf.xacro').getroot()
+        import subprocess
+        expanded = subprocess.run(['xacro', str(PACKAGE.parent / 'dongfeng_description/urdf/dongfeng_car.urdf.xacro')], capture_output=True, text=True, check=True)
+        robot = ET.fromstring(expanded.stdout)
         drive = robot.find("gazebo/plugin[@name='gz::sim::systems::DiffDrive']")
         track, radius = float(drive.findtext('wheel_separation')), float(drive.findtext('wheel_radius'))
         joints = {j.get('name'): j for j in robot.findall('joint')}
@@ -112,8 +114,8 @@ class IntegrationConfigTest(unittest.TestCase):
                 y = float(joints[name].find('origin').get('xyz').split()[1])
                 self.assertAlmostEqual(y, -sign * track / 2)
         self.assertEqual(drive.findtext('topic'), '/cmd_vel')
-        self.assertEqual(float(drive.findtext('min_linear_velocity')), -.25)
-        self.assertEqual(float(drive.findtext('max_linear_velocity')), .25)
+        self.assertEqual(float(drive.findtext('min_linear_velocity')), -.40)
+        self.assertEqual(float(drive.findtext('max_linear_velocity')), .40)
         self.assertEqual(float(drive.findtext('min_angular_acceleration')), -2.4)
         bridge = (PACKAGE / 'config/bridge.yaml').read_text(encoding='utf-8')
         self.assertIn('ros_topic_name: "/cmd_vel_safe"', bridge)
@@ -131,3 +133,16 @@ class ManualStreamTest(unittest.TestCase):
         self.assertTrue(manual_publish_needed((0.,0.),(0.,0.),True))
         self.assertTrue(manual_publish_needed((.1,0.),(.1,0.),False))
         self.assertTrue(manual_publish_needed((0.,0.),(.1,0.),False))
+
+
+class FastVehicleLimitsTest(unittest.TestCase):
+    def test_fast_model_expands_and_manual_limit_is_retained(self):
+        import subprocess
+        expanded=subprocess.run(['xacro',str(PACKAGE.parent/'dongfeng_description/urdf/dongfeng_car.urdf.xacro'),'driving_mode:=fast'],capture_output=True,text=True,check=True)
+        drive=ET.fromstring(expanded.stdout).find('.//plugin[@name="gz::sim::systems::DiffDrive"]')
+        self.assertEqual(float(drive.findtext('max_linear_velocity')),.4)
+        self.assertEqual(float(drive.findtext('min_linear_acceleration')),-.6)
+        self.assertEqual(float(drive.findtext('max_linear_acceleration')),.6)
+        k=KeyboardCommands(speed=.25)
+        k.key('+',0.)
+        self.assertEqual(k.speed,.25)

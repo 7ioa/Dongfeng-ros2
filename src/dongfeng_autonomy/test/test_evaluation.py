@@ -62,6 +62,14 @@ class LapEvaluationTest(unittest.TestCase):
 
 
 class SignalEvaluationTest(unittest.TestCase):
+    def test_fresh_green_crossing_passes_without_a_prior_red_stop(self):
+        from dongfeng_autonomy.evaluation import evaluate_signals
+        r,s,trace,lamps=self.fixture()
+        for lamp in lamps:lamp['colors']['signal_7']='green'
+        result=evaluate_signals(trace,lamps,[s],r)
+        self.assertTrue(result['traffic_pass'],result)
+        self.assertEqual(result['red_stops'],[])
+
     def fixture(self):
         r=Route.perimeter(3.3,5.4,.04,.8,.3)
         signal={'id':'signal_7','line_s':r.project(3.11,3.19)[0]}
@@ -97,7 +105,7 @@ class SignalEvaluationTest(unittest.TestCase):
         r,s,trace,lamps=self.fixture()
         self.assertFalse(evaluate_signals(trace,[],[s],r)['traffic_pass'])
 
-    def test_crossing_green_without_red_stop_is_incomplete_acceptance(self):
+    def test_stale_green_without_red_stop_is_incomplete_acceptance(self):
         from dongfeng_autonomy.evaluation import evaluate_signals
         r,s,trace,lamps=self.fixture()
         lamps=[dict(t=0.,colors={'signal_7':'green'})]
@@ -127,3 +135,28 @@ class GuiSampleTimeTest(unittest.TestCase):
         result=gui_signal_sample(sample,100.1)
         self.assertEqual(result['t'],3.)
         self.assertEqual(result['colors']['signal_7'],'green')
+
+class PerformanceEvaluationTest(unittest.TestCase):
+    def test_wall_and_simulation_waits_are_separate(self):
+        from dongfeng_autonomy.evaluation import evaluate_performance
+        truth=[dict(t=i*.1,x=i*.01,y=0.,error=0.) for i in range(31)]
+        states=[dict(sim_time=i,wall_time=100.+2*i,command=[.1 if i==0 else 0.,0.],
+                     state=state,pose=[i*.1,0.,0.],segment='road')
+                for i,state in enumerate(('DRIVE','WAIT_SIGNAL','WAIT_SENSORS','COMPLETE'))]
+        result=evaluate_performance(truth,states)
+        self.assertEqual(result['mission_sim_seconds'],3.)
+        self.assertEqual(result['mission_wall_seconds'],6.)
+        self.assertEqual(result['real_time_factor'],.5)
+        self.assertEqual(result['phase_times']['driving']['wall_seconds'],2.)
+        self.assertEqual(result['phase_times']['signal_wait']['sim_seconds'],1.)
+        self.assertEqual(result['phase_times']['sensor_wait']['wall_seconds'],2.)
+        self.assertAlmostEqual(result['average_speed'],.1)
+
+
+class RequiredSignalStopsTest(unittest.TestCase):
+    def test_each_required_new_cycle_signal_needs_its_own_red_stop(self):
+        from dongfeng_autonomy.evaluation import evaluate_signals
+        r,s,trace,lamps=SignalEvaluationTest().fixture()
+        second=dict(id='second',line_s=r.project(3.11,3.28)[0],require_new_green=True)
+        for sample in lamps:sample['colors']['second']=sample['colors']['signal_7']
+        self.assertFalse(evaluate_signals(trace,lamps,[s,second],r)['traffic_pass'])

@@ -16,6 +16,18 @@ CONFIG=Path(__file__).resolve().parents[1]/'config'
 def mission():return Mission.load(CONFIG/'full_demo.json',json.loads((CONFIG/'signals.json').read_text()))
 
 class MissionTest(unittest.TestCase):
+    def test_each_demo_signal_releases_on_existing_green_without_waiting_a_cycle(self):
+        from dongfeng_autonomy.speed import SpeedProfile
+        for index in range(3):
+            with self.subTest(signal=index):
+                m=mission();sig=m.signals[index];m.index=sig['segment_index']
+                d=Driver(m,m.signals,speed=.4,profile=SpeedProfile.load(CONFIG/'speed_fast.json'))
+                d.signal_index=index;d.progress=sig['stop_s']-.02
+                pose=(*m.target(d.progress),m.active.route.heading(d.progress-m.offsets[m.index]))
+                for frame in (1,2):
+                    self.assertEqual(d.step(pose,Observation(light='green',light_id=sig['id'],frame=frame),frame*.05),(0.,0.))
+                self.assertGreater(d.step(pose,Observation(light='green',light_id=sig['id'],frame=3),.15)[0],0.)
+
     def test_invalid_configuration_fails_closed(self):
         for option in ({'speed':math.nan},{'lookahead':-.1},{'completion_distance':0},{'kind':'unknown'}):
             with self.assertRaises(ValueError):

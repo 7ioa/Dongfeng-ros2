@@ -438,9 +438,24 @@ ros2 service call /autonomy/enable std_srvs/srv/SetBool '{data: false}'
 
 相机、雷达、IMU、odom 超过 0.5 秒无有效新数据时停车；CameraInfo 为 2 秒。定位修正允许最多 1.5 秒短时中断，超过 0.5 秒时先降速至不超过 0.09 m/s，继续使用新鲜 odom/IMU；超过 1.5 秒必须停车等待。传感器恢复后可继续，几何/非法数据故障须人工禁用后重新启用，时钟回退须重启任务。完成状态不会被重新启用解除。
 
-综合任务直道最高 0.18 m/s、路口 0.09–0.10、环岛 0.085、停车场 0.075–0.09、后方上坡 0.15、下坡 0.13，自动总上限仍为 0.20。曲率和实际速度参与限速/制动距离计算。坡道不再仅按 pitch 降为爬行速度，也不要求双侧车道线；连续有驱动指令但 15 秒无进展仍锁存故障。启动可追加 `phase_offset:=8` 改变灯相位，`force_color:=red` / `green` 仅用于受控测试。
+自主驾驶统一使用优化后的速度策略，自动总上限为 0.40 m/s；弯道、路口、停车场和坡道按区域与曲率限速。连续有驱动指令但 15 秒无进展仍锁存故障。启动可追加 `phase_offset:=8` 改变灯相位，`force_color:=red` / `green` 仅用于受控测试。
 
-红灯、黄灯或灯色不可确认时，在本方向停车线前停车等待；当前方向绿灯需连续 3 个新图像帧确认后起步。综合演示的三处信号配置 `require_new_green: true`：先停车并从图像观察到红/黄灯，再等待新一轮绿灯；即使到达时已是绿灯，也等待这一完整过程，避免在无法知道剩余绿灯时间时贸然进入。外围兼容模式仍允许已确认的绿灯直接通过。新绿灯授权窗口限定为最后一次观察到红/黄灯后的 2 秒；短暂传感器中断期间仍停车，恢复后重新累计三帧，过期则等待下一周期。综合演示若持续强制绿灯会在线前等待；受控测试请用 `--controlled-signals` 自动完成先红后绿的流程。`/autonomy/status.reason` 区分等待红灯/未知灯与短暂的绿灯确认。已越过停车线后完成驶离。
+仅保留快速模式，默认入口直接使用现有优化参数，无需选择模式：
+
+```bash
+bash launch_autonomy.sh
+# 可选：降低总上限，区域和预瞄策略仍生效
+bash launch_autonomy.sh speed:=0.32
+```
+
+速度配置为 `src/dongfeng_autonomy/config/speed_fast.json`。旧 `driving_mode:=fast` 写法仍可用，`normal` 不再是启动选项。`speed.py` 按弧长采样路径曲率和区域速度，向后传播舒适制动包络，并预瞄前方至少 0.85 m，包括尚未进入的任务段。停止线同时使用地图和有效图像观测；制动考虑实际轮速、控制延迟和 odom/IMU 数据年龄。正常加速按仿真时间限制至 0.25 m/s²，预瞄减速按 0.25 m/s² 规划，横向加速度仍不超过原来的 0.045 m/s²；紧急停车直接输出零指令。路径横向偏差增加时主动降速，直道前视距离随轮速增加至最多 0.22 m；路口、环岛、窄入口继续采用短前视。
+
+候选直道上限 0.40 m/s，中央南/北直道分别 0.32/0.24，十字路口 0.13–0.16，环岛 0.10–0.12，场内 S 路线最多 0.14，左侧窄入口保持 0.075，右出口 0.09，坡道最多 0.18（倾角较大时 0.16），返程小弯 0.08。实际速度还受前方曲率、制动距离、车道/定位状态影响。DiffDrive 默认线速度限幅为 0.40；车轮摩擦、滑移、最大加速度、转向 PI 和保护超时保持现有参数。人工命令仍最高 0.25 m/s。绿灯三新帧确认、停车线、路径走廊、定位创新及异常锁存规则继续生效。
+
+快速模式实跑与耗时分解见 [速度优化验收记录](docs/2026-09-30-speed-validation.md)。耗时应分别比较仿真时间、墙钟时间、运动时间和信号等待；不同灯相位及虚拟机渲染负载会改变总墙钟收益。
+
+
+红灯、黄灯或灯色不可确认时，在本方向停车线前停车等待；当前方向绿灯连续 3 个新图像帧确认后直接通行。综合演示三处信号均配置 `require_new_green: false`，不要求先经历红/黄灯或再等待一轮灯周期。途中保持已确认的绿灯时可直接驶过停车线；越线前若变黄、变红或识别失效，则撤销绿灯授权并制动。短暂传感器中断期间停车，恢复后重新累计三帧。`/autonomy/status.reason` 区分等待红灯/未知灯与短暂的绿灯确认。已越过停车线后完成驶离。`--force-green` 验证已有绿灯直接通行，`--controlled-signals` 验证三处分别红灯停车后转绿起步，两者均只用于测试。
 
 普通道路使用车道辅助，路口、环岛、停车场和坡道按已知路径与定位行驶，保留 LiDAR 制动保护。灯色识别只读取图像，ROI 来自当前任务绑定的灯头坐标，状态包括 `APPROACH_SIGNAL`、`WAIT_SIGNAL`、`CROSSING`。不会因已经进入路口后的红灯而急停；真正的障碍物和传感器失效仍停车。
 
@@ -457,6 +472,9 @@ PYTHONPATH=src/dongfeng_autonomy python3 -m unittest discover -s src/dongfeng_au
 python3 -m unittest discover -s src/dongfeng_bringup/test -v
 python3 scripts/autonomy/validate_geometry.py
 python3 scripts/autonomy/validate_run.py --mission full_demo --seconds 900 --domain 94 --output reports/autonomy/my_run
+python3 scripts/autonomy/validate_run.py --mission full_demo --gui --force-green --seconds 700 --domain 114 --output reports/autonomy/my_green_pass
+python3 scripts/autonomy/validate_faults.py --speed 0.4 --domain 115 --output reports/autonomy/my_fast_faults
+python3 scripts/autonomy/validate_speed_braking.py --domain 116 --output reports/autonomy/my_speed_braking
 python3 scripts/autonomy/validate_run.py --mission perimeter --gui --seconds 420 --domain 95 --output reports/autonomy/my_perimeter
 python3 scripts/autonomy/validate_run.py --mission full_demo --gui --controlled-signals --domain 97 --output reports/autonomy/my_signal_stops
 python3 scripts/autonomy/validate_faults.py --domain 96 --output reports/autonomy/my_faults
@@ -465,6 +483,6 @@ python3 scripts/autonomy/validate_signals.py --headless --domain 98 --output rep
 
 验证前先运行 `bash scripts/build_control.sh` 并 source `install_control/local_setup.bash`。脚本自行启动并清理仿真。不要同时开启同一域的旧实例；检查另一终端时设置相同 `ROS_DOMAIN_ID`，Gazebo 工具还需对应的 `GZ_PARTITION`。`/autonomy/debug_image` 显示灯头 ROI 和识别结果；`/autonomy/status` 包含 `mission`、`segment`、`segment_index`、`segment_progress`（米）、`mission_progress`（0–1）、停车原因、定位修正/拒绝数、数据年龄、实际轮速和指令。`commands.json` 记录自动、仲裁及安全输出，便于诊断“有命令但不动”和“控制器主动停车”。
 
-综合任务的独立验收按有序段投影真实轨迹，核验完整段序列、连续运动、回到起点、静止至少 2 秒，并将实际车身包络与场景碰撞网格比较、检查退出后的 SLAM 导出文件完整性；自然灯周期至少需要一次红灯停车，`--controlled-signals` 要求三组指定灯分别停车后绿灯通过。最新结果见 [综合巡航升级记录](reports/autonomy/2026-09-29-full-demo.md)。
+综合任务的独立验收按有序段投影真实轨迹，核验完整段序列、连续运动、回到起点、静止至少 2 秒，并将实际车身包络与场景碰撞网格比较、检查退出后的 SLAM 导出文件完整性；各处车头越线必须为新鲜的绿灯真值。自然灯周期允许到达时已有绿灯直接通行，`--controlled-signals` 另要求三组指定灯分别停车后绿灯通过。历史结果见 [综合巡航升级记录](reports/autonomy/2026-09-29-full-demo.md)。
 
 外围模式的历史验收规则如下。独立验收输出 `truth.json`、`status.json`、`signals.json`、`summary.json` 及图像。`motion_lap_pass` 要求真实轨迹顺序经过四角、无跳点、轮廓在路内、回到起点并静止至少 2 秒；`traffic_pass` 要求两个车头越线事件均为绿灯且至少一次真实红灯停车。`--gui` 还会编译并加载只读探针，记录 Ogre 窗口实际灯色及原始采样时间到 `gui_signals.json`；`gui_traffic_pass` 必须通过才能通过总验收。GUI 探针需要本地 Gazebo 开发头文件、g++、Qt rcc 与 pkg-config。`--controlled-signals` 让左右灯分别保持红灯，检测到停车后切绿，并保存窗口像素截图。无 GUI 时，总 `lap_pass` 只核验运动和服务器灯色两项；带 GUI 时三项均须通过。实际结果与证据见 [自主巡航验收记录](reports/autonomy/2026-09-22-validation.md)。

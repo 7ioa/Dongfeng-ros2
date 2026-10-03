@@ -1,0 +1,32 @@
+{
+  "max_speed": 0.4,
+  "acceleration": 0.25,
+  "deceleration": 0.25,
+  "lateral_acceleration": 0.045,
+  "planning_delay": 0.25,
+  "obstacle_delay": 0.6,
+  "margin": 0.035,
+  "sample_distance": 0.015,
+  "preview_distance": 0.85,
+  "lookahead_time": 0.35,
+  "max_lookahead": 0.22,
+  "region_limits": {
+    "road": 0.4,
+    "intersection": 0.16,
+    "roundabout": 0.12,
+    "parking": 0.14,
+    "slope": 0.18
+  },
+  "segment_limits": {
+    "central_north": 0.24,
+    "central_south": 0.32,
+    "signal_1_north_turn": 0.13,
+    "signal_2_south_turn": 0.13,
+    "roundabout_entry": 0.1,
+    "P5_roundabout": 0.12,
+    "left_gate_approach": 0.075,
+    "parking_slam_S": 0.14,
+    "parking_exit": 0.09,
+    "return_start": 0.08
+  }
+}

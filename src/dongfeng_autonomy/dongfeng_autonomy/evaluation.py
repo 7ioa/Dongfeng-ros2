@@ -4,12 +4,12 @@ import numpy as np
 from .route import wrap
 
 
-def evaluate_mission(truth,complete,mission):
+def evaluate_mission(truth,complete,mission,max_speed=.30):
     """Truth progress is produced by a separate, ordered Mission tracker."""
     if len(truth)<2:return dict(lap_pass=False,trajectory_valid=False)
     data=np.array([[p[k] for k in ('t','x','y','yaw','progress')] for p in truth])
     dt=np.diff(data[:,0]);ds=np.linalg.norm(np.diff(data[:,1:3],axis=0),axis=1)
-    valid=bool(np.isfinite(data).all() and np.all((dt>0)&(dt<.6)) and np.all(ds<=.3*dt+.005))
+    valid=bool(np.isfinite(data).all() and np.all((dt>0)&(dt<.6)) and np.all(ds<=max_speed*dt+.005))
     indices=[p['segment_index'] for p in truth]
     visits=list(dict.fromkeys(indices))
     corridor=all(abs(p['error'])<=mission.segments[p['segment_index']].corridor for p in truth)
@@ -26,7 +26,7 @@ def evaluate_mission(truth,complete,mission):
                 truth_progress=float(data[-1,4]),visited_segments=[mission.segments[i].name for i in visits])
 
 
-def evaluate_lap(truth, complete, route):
+def evaluate_lap(truth, complete, route, max_speed=.30):
     result = dict(complete=bool(complete), lap_pass=False, checkpoints=[],
                   trajectory_valid=False, road_containment_pass=False,
                   truth_progress=0., stationary_seconds=0., return_distance=None,
@@ -38,7 +38,7 @@ def evaluate_lap(truth, complete, route):
     if not np.isfinite(data).all():return result
     ts,xy,yaws=data[:,0],data[:,1:3],data[:,3]
     dt=np.diff(ts);ds=np.linalg.norm(np.diff(xy,axis=0),axis=1)
-    valid=bool(np.all((dt>0)&(dt<=.5)) and np.all(ds<=.30*dt+.005))
+    valid=bool(np.all((dt>0)&(dt<=.5)) and np.all(ds<=max_speed*dt+.005))
     # Reject missing starts, jumps, reverse laps and off-road shortcuts.
     valid=valid and np.linalg.norm(xy[0]-route.target(0))<.08
     progress=[];errors=[];footprint=0.
@@ -55,7 +55,7 @@ def evaluate_lap(truth, complete, route):
             _,err=route.project(p['x']+c*dx-sn*dy,p['y']+sn*dx+c*dy)
             footprint=max(footprint,abs(err))
     unwrapped=np.unwrap(np.asarray(progress)*2*math.pi/route.length)*route.length/(2*math.pi)
-    valid=valid and bool(np.all(abs(np.diff(unwrapped))<=.30*dt+.01))
+    valid=valid and bool(np.all(abs(np.diff(unwrapped))<=max_speed*dt+.01))
     # Midpoints of the four actual perimeter bends, in required order.
     r=.65/math.sqrt(2)
     gates=[('B',(2.46+r,.84-r)),('C',(2.46+r,4.56+r)),
@@ -114,7 +114,9 @@ def evaluate_signals(truth, lamps, signals, route):
         if longest>=1.:
             red_stops.append(dict(signal=sig['id'],seconds=longest,front_gap=float(gap[stop_end])))
     passed=all(any(e['signal']==s['id'] and e['pass_green'] for e in events) for s in signals)
-    passed=bool(passed and events and all(e['pass_green'] for e in events) and red_stops)
+    required={s['id'] for s in signals if s.get('require_new_green',False)}
+    stopped={s['signal'] for s in red_stops}
+    passed=bool(passed and events and all(e['pass_green'] for e in events) and required<=stopped)
     return dict(traffic_pass=passed,signal_crossings=events,red_stops=red_stops)
 
 
@@ -129,3 +131,53 @@ def gui_signal_sample(sample, received_wall):
         lit=[c for c in ('red','yellow','green') if max(bulbs.get(name+'_'+c,[0]))>.5]
         colors[name]=lit[0] if len(lit)==1 else 'unknown'
     return dict(t=stamp,colors=colors,sample_wall=wall,transport_delay=received_wall-wall)
+
+
+def evaluate_performance(truth, states):
+    """Attribute completed mission time; wall and simulation clocks stay separate."""
+    if len(truth)<2 or len(states)<2:return {}
+    begin=next((i for i,s in enumerate(states) if s['command'][0]>.01),None)
+    end=next((i for i,s in enumerate(states) if s['state']=='COMPLETE'),len(states)-1)
+    if begin is None or end<=begin:return {}
+    samples=states[begin:end+1]
+    phases={k:dict(sim_seconds=0.,wall_seconds=0.) for k in ('driving','signal_wait','sensor_wait','other_stop')}
+    segments={}
+    for a,b in zip(samples,samples[1:]):
+        sim=max(0.,b['sim_time']-a['sim_time']);wall=max(0.,b['wall_time']-a['wall_time'])
+        phase='signal_wait' if a['state']=='WAIT_SIGNAL' else ('sensor_wait' if a['state']=='WAIT_SENSORS' else ('driving' if a['command'][0]>0. else 'other_stop'))
+        phases[phase]['sim_seconds']+=sim;phases[phase]['wall_seconds']+=wall
+        segment=segments.setdefault(a.get('segment','perimeter'),dict(sim_seconds=0.,wall_seconds=0.,max_path_error=0.,max_localization_error=0.))
+        segment['sim_seconds']+=sim;segment['wall_seconds']+=wall
+    t=np.array([p['t'] for p in truth]);xy=np.array([[p['x'],p['y']] for p in truth])
+    dt=np.diff(t);ds=np.linalg.norm(np.diff(xy,axis=0),axis=1)
+    speed=ds/np.maximum(dt,1e-9)
+    mask=(t[1:]>=samples[0]['sim_time'])&(t[1:]<=samples[-1]['sim_time'])&(dt>0.)
+    localization=[]
+    for sample in samples:
+        i=int(np.searchsorted(t,sample['sim_time']));i=min(len(t)-1,max(0,i))
+        if i and abs(t[i-1]-sample['sim_time'])<abs(t[i]-sample['sim_time']):i-=1
+        if abs(t[i]-sample['sim_time'])>.15:continue
+        error=math.dist(sample['pose'][:2],xy[i]);localization.append(error)
+        segment=segments.get(sample.get('segment','perimeter'))
+        if segment:
+            segment['max_localization_error']=max(segment['max_localization_error'],error)
+            segment['max_path_error']=max(segment['max_path_error'],abs(truth[i].get('error',0.)))
+    sim=samples[-1]['sim_time']-samples[0]['sim_time'];wall=samples[-1]['wall_time']-samples[0]['wall_time']
+    moving_time=float(np.sum(dt[mask&(speed>.01)]));distance=float(np.sum(ds[mask]))
+    # Estimate physical acceleration over >=0.25 s, avoiding differentiation of
+    # sub-millimetre contact jitter at individual physics steps.
+    acceleration=[]
+    indices=np.flatnonzero(mask)
+    for i in indices:
+        j=int(np.searchsorted(t,t[i]+.25))
+        k=int(np.searchsorted(t,t[i]+.5))
+        if k>=len(t) or t[k]>samples[-1]['sim_time']:continue
+        v1=math.dist(xy[i],xy[j])/(t[j]-t[i]);v2=math.dist(xy[j],xy[k])/(t[k]-t[j])
+        acceleration.append((v2-v1)/((t[k]-t[i])*.5))
+    return dict(mission_sim_seconds=sim,mission_wall_seconds=wall,real_time_factor=sim/wall if wall else None,
+        phase_times=phases,distance_metres=distance,moving_sim_seconds=moving_time,
+        average_speed=distance/sim if sim else None,moving_average_speed=distance/moving_time if moving_time else None,
+        max_actual_speed=float(np.max(speed[mask])) if mask.any() else None,
+        p95_actual_speed=float(np.percentile(speed[mask],95)) if mask.any() else None,
+        max_acceleration=max(acceleration,default=None),max_deceleration=-min(acceleration,default=0.),
+        max_localization_error=max(localization,default=None),segment_performance=segments)

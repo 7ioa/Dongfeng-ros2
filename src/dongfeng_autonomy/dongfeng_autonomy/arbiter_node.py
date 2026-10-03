@@ -12,6 +12,8 @@ from .control import CommandMux
 class Arbiter(Node):
     def __init__(self):
         super().__init__('command_arbiter')
+        mode=str(self.declare_parameter('driving_mode','fast').value)
+        if mode!='fast':raise ValueError('Only the optimized fast driving profile is supported')
         self.mux=CommandMux();self.mux.enable(self.declare_parameter('start_enabled',True).value)
         self.auto=(0.,0.);self.stamp=-float('inf')
         self.pub=self.create_publisher(Twist,'/cmd_vel',1)

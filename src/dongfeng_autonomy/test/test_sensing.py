@@ -1,3 +1,4 @@
+import math
 import unittest
 from dongfeng_autonomy.sensing import Freshness
 
@@ -33,3 +34,9 @@ class OrientationTest(unittest.TestCase):
         r,p,y=orientation_rpy([0,0,.707107,.707107])
         self.assertAlmostEqual(r,0.);self.assertAlmostEqual(p,0.)
         self.assertAlmostEqual(y,math.pi/2)
+
+class TrackingAgeTest(unittest.TestCase):
+    def test_missing_startup_ages_are_safe_and_stale_source_is_counted(self):
+        from dongfeng_autonomy.sensing import tracking_age
+        self.assertEqual(tracking_age({'odom':math.inf,'imu':math.inf},{'odom':math.inf,'imu':math.inf}),0.)
+        self.assertEqual(tracking_age({'odom':.1,'imu':.2},{'odom':.4,'imu':.05}),.4)

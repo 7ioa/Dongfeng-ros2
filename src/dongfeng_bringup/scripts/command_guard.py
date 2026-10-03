@@ -16,7 +16,9 @@ class CommandGuard(Node):
     def __init__(self):
         super().__init__('command_guard')
         timeout = float(self.declare_parameter('command_timeout', 0.4).value)
-        self.lease = CommandLease(timeout)
+        mode = str(self.declare_parameter('driving_mode', 'fast').value)
+        if mode != 'fast':raise ValueError('Only the optimized fast driving profile is supported')
+        self.lease = CommandLease(timeout, max_linear=.4)
         self.pub = self.create_publisher(Twist, '/cmd_vel_safe', 1)
         self.sub = self.create_subscription(Twist, '/cmd_vel', self.receive, 1)
         # A ROS-time timer would stop on pause and retain a stale command.

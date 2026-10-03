@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import math
 import numpy as np
 from .route import wrap
+from .speed import SpeedPlanner
 
 
 @dataclass
@@ -18,10 +19,13 @@ class Observation:
     stop_distance: float | None = None
     localization_age: float = 0.
     measured_speed: float = 0.
+    pose_age: float = 0.
 
 
 class CommandMux:
-    def __init__(self, timeout=.4):
+    def __init__(self, timeout=.4, auto_limit=.40):
+        if not math.isfinite(auto_limit) or not 0<auto_limit<=.4:raise ValueError("Invalid automatic limit")
+        self.auto_limit=auto_limit
         self.enabled=False
         self.timeout=timeout
         self.manual_velocity=(0.,0.)
@@ -40,7 +44,7 @@ class CommandMux:
         command,stamp=(automatic,auto_time) if self.enabled else (self.manual_velocity,self.manual_time)
         if not 0 <= now-stamp < self.timeout or not all(math.isfinite(v) for v in command):
             return (0.,0.)
-        limit=.20 if self.enabled else .25
+        limit=self.auto_limit if self.enabled else .25
         return (max(-limit,min(limit,command[0])),max(-1.2,min(1.2,command[1])))
 
 
@@ -82,8 +86,12 @@ def obstacle_distance(ranges, angles, curvature=0.):
 
 
 class Driver:
-    def __init__(self, route, signals, speed=.20):
-        if not 0<speed<=.20:raise ValueError('speed must be in (0, 0.20]')
+    def __init__(self, route, signals, speed=.20, profile=None):
+        if not math.isfinite(speed) or not 0<speed<=(profile.max_speed if profile else .20):raise ValueError("Invalid driving speed")
+        self.profile=profile
+        self.planner=SpeedPlanner(route,profile) if profile else None
+        self.command_speed=0.;self.speed_target=0.;self.control_dt=.05
+        self.measured_speed=0.;self.obstacle_hold_speed=0.
         self.route=route;self.signals=sorted(signals,key=lambda s:s['stop_s'])
         self.speed=speed;self.progress=0.;self.state='WAIT_SENSORS'
         self.signal_index=0;self.green_frames=0;self.last_frame=None
@@ -101,7 +109,10 @@ class Driver:
 
     def tracking_curvature(self,pose,progress=None):
         s=self.progress if progress is None else progress
-        target=self.route.target(s+(self.segment.lookahead if self.segment else .15))
+        lookahead=self.segment.lookahead if self.segment else .15
+        if self.profile and (self.segment is None or self.segment.kind=="road"):
+            lookahead=min(self.profile.max_lookahead,lookahead+self.profile.lookahead_time*abs(self.measured_speed))
+        target=self.route.target(s+lookahead)
         alpha=wrap(math.atan2(target[1]-pose[1],target[0]-pose[0])-pose[2])
         return 2*math.sin(alpha)/max(.05,math.dist(target,pose[:2]))
 
@@ -123,6 +134,7 @@ class Driver:
 
     def stop(self,state,reason):
         self.state=state;self.reason=reason
+        self.command_speed=0.;self.speed_target=0.
         if state=='FAULT_STOP':self.fault_reason=reason
         return 0.,0.
 
@@ -135,7 +147,10 @@ class Driver:
             self.green_frames=0
             self.clock_fault=True
             return self.stop('FAULT_STOP','clock reset; restart mission')
+        self.control_dt=.05 if self.last_time is None else min(.1,max(0.,now-self.last_time))
         self.last_time=now
+        if not all(math.isfinite(v) for v in (obs.measured_speed,obs.pose_age)) or obs.pose_age<0:return self.stop("FAULT_STOP","invalid measured speed")
+        self.measured_speed=obs.measured_speed
         if not enabled:
             self.recovery_pending=True
             self.entry_authorized=False
@@ -175,16 +190,22 @@ class Driver:
             if np.linalg.norm(np.array([x,y])-self.route.target(0))<.08 and abs(wrap(yaw))<math.radians(15):
                 return self.stop('COMPLETE','MISSION COMPLETE')
         curvature=self.tracking_curvature(pose,s)
-        speed=min(self.speed,seg.speed if seg else self.speed)
+        speed=min(self.speed,self.planner.limit(s,obs.measured_speed,obs.pose_age) if self.planner else (seg.speed if seg else self.speed))
+        if self.profile:
+            # Reduce speed before a small tracking error reaches the unchanged corridor.
+            corridor=seg.corridor if seg else .065
+            speed*=max(.35,1.-max(0.,abs(error)/corridor-.3))
         # Curvature limits lateral acceleration; pitch alone never forces crawl.
         speed=min(speed,math.sqrt(.045/max(.01,abs(curvature))))
-        if seg is None and abs(curvature)>.6:speed=min(speed,.15)
-        if seg and seg.kind=='slope':speed=min(speed,.15 if obs.pitch<0 else .13)
+        if not self.profile and seg is None and abs(curvature)>.6:speed=min(speed,.15)
+        if seg and seg.kind=='slope':speed=min(speed,(.18 if abs(obs.pitch)<.15 else .16) if self.profile else (.15 if obs.pitch<0 else .13))
         if lane_required and not obs.lane_valid:speed=min(speed,.09)
         if obs.localization_age>.5:speed=min(speed,.09)
-        if seg and self.route.index==len(self.route.segments)-1:
+        if ((seg and self.route.index==len(self.route.segments)-1)
+                or (self.profile and self.route.closed and self.progress>self.route.length-.65)):
             speed=min(speed,max(.035,(self.route.length-s)*.8))
         self.state={'roundabout':'ROUNDABOUT','parking':'PARKING_AREA','slope':'SLOPE'}.get(seg.kind if seg else '', 'DRIVE');self.reason=''
+        green=False
         if self.signal_index<len(self.signals):
             sig=self.signals[self.signal_index];distance=sig['stop_s']-s
             if obs.stop_distance is not None and distance>0:
@@ -199,9 +220,8 @@ class Driver:
                     if (distance<=.04 and abs(obs.measured_speed)<.01 and obs.light_id==sig['id']
                             and obs.light in ('red','yellow')):
                         self.green_cycle_ready=True;self.last_red_observation=now
-                # A demo intersection deliberately waits for an image-observed
-                # new green cycle at rest. An already-green approach may be at
-                # the very end of green; camera latency cannot reveal time left.
+                # Only signals explicitly opting into a new-cycle policy wait
+                # for an image-observed red/green transition at rest.
                 # Keep the observed transition through a short sensor stop,
                 # but never reuse it at the end of a green phase. A stopped
                 # vehicle must still receive three new green frames to resume.
@@ -220,19 +240,33 @@ class Driver:
                     if s+.1032>=line_s:
                         self.committed=True;self.state='CROSSING'
                 else:
-                    speed=min(speed,max(0.,distance*.6))
+                    speed=min(speed,self.planner.stop_limit(distance,obs.measured_speed,obs.pose_age) if self.planner else max(0.,distance*.6))
                     if distance<=.04:
                         reason=(f'waiting for observed red/green cycle at {sig["id"]}' if sig.get('require_new_green',False) and not self.green_cycle_ready and obs.light=='green'
                                 else f'confirming green {self.green_frames}/3' if obs.light_id==sig['id'] and obs.light=='green'
                                 else f'waiting at {sig["id"]}: {obs.light if obs.light_id==sig["id"] else "unknown"}')
                         return self.stop('WAIT_SIGNAL',reason)
-        braking_speed=max(speed,abs(obs.measured_speed))
-        stopping=braking_speed*braking_speed/(2*.4)+braking_speed*.35+.035
-        if obs.clearance<stopping:return self.stop('OBSTACLE_STOP','obstacle inside braking distance')
+        if self.planner and self.signal_index<len(self.signals) and not self.committed and not green:
+            distance=self.signals[self.signal_index]["stop_s"]-s
+            if distance>0:speed=min(speed,self.planner.stop_limit(distance,obs.measured_speed,obs.pose_age))
+        self.speed_target=speed
+        if self.profile:
+            # Emergency stops return above/below directly; only ordinary driving ramps.
+            speed=min(speed,self.command_speed+self.profile.acceleration*self.control_dt)
+        braking_speed=max(self.speed_target,abs(obs.measured_speed),self.obstacle_hold_speed if self.profile else 0.)
+        stopping=braking_speed*braking_speed/(2*.4)+braking_speed*(self.profile.obstacle_delay if self.profile else .35)+.035
+        if obs.clearance<stopping:
+            # A lower lane/localization speed cap does not clear a blocking object.
+            # Retain the triggering braking envelope until fresh swept clearance
+            # permits recovery; removal of the obstacle clears this automatically.
+            if self.profile:self.obstacle_hold_speed=braking_speed
+            return self.stop('OBSTACLE_STOP','obstacle inside braking distance')
+        self.obstacle_hold_speed=0.
         angular=speed*curvature
         # Image-derived lateral error in metres; bounded correction.
         if lane_required and obs.lane_valid and abs(curvature)<.6 and abs(obs.pitch)<.05:
             angular+=max(-.025,min(.025,-.5*obs.lane_error))
+        self.command_speed=speed
         return speed,max(-.8,min(.8,angular))
 
 

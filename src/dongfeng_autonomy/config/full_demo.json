@@ -129,7 +129,7 @@
           2.1,
           2.565
         ],
-        "require_new_green": true
+        "require_new_green": false
       },
       "next_segment": "central_north"
     },
@@ -529,7 +529,7 @@
           0.19,
           3.68
         ],
-        "require_new_green": true
+        "require_new_green": false
       },
       "next_segment": "enter_crossroad_east"
     },
@@ -611,7 +611,7 @@
           1.2,
           2.25135
         ],
-        "require_new_green": true
+        "require_new_green": false
       },
       "next_segment": "central_south"
     },
